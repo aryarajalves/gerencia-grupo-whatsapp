@@ -203,7 +203,8 @@ def atualizar_contagem_contatos(db):
                     db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
                     db.commit()
 
-                    novos_contatos = []  # Lista de contatos novos para enviar ao webhook
+                    novos_contatos = []  # Lista de contatos novos
+                    todos_contatos = []  # Lista de todos os contatos do grupo
 
                     for p in participants:
                         try:
@@ -213,6 +214,7 @@ def atualizar_contagem_contatos(db):
                                 p_numero = p_numero.split("@")[0]
 
                             p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
+                            todos_contatos.append({"nome": p_nome, "numero": p_numero})
                             
                             existe = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
                             if not existe:
@@ -232,13 +234,14 @@ def atualizar_contagem_contatos(db):
                         except Exception as ep:
                             print(f"Erro participante {p.get('id')}: {ep}")
                     
-                    # Dispara webhook para contatos novos (se configurado)
+                    # Dispara webhook se configurado (usa novos_contatos ou todos_contatos se novos estiver vazio)
                     webhook_url = getattr(grupo, 'webhook_extracao_url', None)
-                    if webhook_url and novos_contatos:
-                        print(f"W-API Webhook: Enviando {len(novos_contatos)} novo(s) contato(s) para {webhook_url}")
+                    contatos_para_webhook = novos_contatos if novos_contatos else todos_contatos
+                    if webhook_url and contatos_para_webhook:
+                        print(f"W-API Webhook: Enviando {len(contatos_para_webhook)} contato(s) para {webhook_url}")
                         grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
-                        for contato_novo in novos_contatos:
-                            disparar_webhook_contato(webhook_url, contato_novo, grupo_info)
+                        for c in contatos_para_webhook:
+                            disparar_webhook_contato(webhook_url, c, grupo_info)
 
                     # Salva log de sucesso no Histórico
                     log_sucesso = models.LogDisparo(

@@ -218,6 +218,9 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
         db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
         db.commit()
 
+        novos_contatos = []
+        todos_contatos = []
+
         for p in participants:
             p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
             if not p_numero: continue
@@ -226,6 +229,7 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
                 p_numero = p_numero.split("@")[0]
 
             p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
+            todos_contatos.append({"nome": p_nome, "numero": p_numero})
             
             existe = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
             if not existe:
@@ -236,16 +240,27 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
                     extraido_em=agora
                 )
                 db.add(novo)
+                novos_contatos.append({"nome": p_nome, "numero": p_numero})
             else:
                 if p_nome: existe.nome = p_nome
                 existe.no_grupo = True
                 if cid: existe.cliente_id = cid
 
+        # Dispara webhook se configurado
+        webhook_url = getattr(grupo, 'webhook_extracao_url', None)
+        contatos_para_webhook = novos_contatos if novos_contatos else todos_contatos
+
+        if webhook_url and contatos_para_webhook:
+            grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
+            print(f"W-API Webhook Manual: Enviando {len(contatos_para_webhook)} contato(s) para {webhook_url}")
+            for c in contatos_para_webhook:
+                sync_service.disparar_webhook_contato(webhook_url, c, grupo_info)
+
         # Registra log no Histórico
         log = models.LogDisparo(
             cliente_id=cid,
             grupo_nome=grupo.nome,
-            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados)",
+            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {len(contatos_para_webhook)} enviados via webhook)",
             status="SUCESSO",
             tipo="extracao_contatos",
             criado_em=agora
