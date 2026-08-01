@@ -229,6 +229,52 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
   };
 
 
+  // Seleção em Massa
+  const [selectedGroupIds, setSelectedGroupIds] = useState([]);
+
+  const toggleSelectGroup = (id) => {
+    setSelectedGroupIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = (gruposParaSelecionar) => {
+    const ids = gruposParaSelecionar.map(g => g.id);
+    const todosJaSelecionados = ids.every(id => selectedGroupIds.includes(id));
+    if (todosJaSelecionados) {
+      setSelectedGroupIds(prev => prev.filter(id => !ids.includes(id)));
+    } else {
+      setSelectedGroupIds(prev => Array.from(new Set([...prev, ...ids])));
+    }
+  };
+
+  const clearSelection = () => setSelectedGroupIds([]);
+
+  const finalizeBulkDelete = async (idsParaDeletar) => {
+    const ids = idsParaDeletar || selectedGroupIds;
+    if (ids.length === 0) return;
+
+    setProcessing(true);
+    try {
+      const res = await axiosInstance.post('/grupos/bulk-delete', { grupo_ids: ids });
+      toastDeletado(
+        'Grupos Excluídos com Sucesso!',
+        res.data.message || `${ids.length} grupos foram removidos permanentemente.`
+      );
+      setSelectedGroupIds([]);
+      onRefresh();
+    } catch (error) {
+      openConfirm({
+        title: 'Erro na Exclusão em Massa',
+        message: 'Ocorreu uma falha ao excluir os grupos selecionados: ' + (error.response?.data?.detail || error.message),
+        type: 'danger'
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+
   return {
     activeSubTab, setActiveSubTab,
     novoGrupo, setNovoGrupo,
@@ -242,6 +288,9 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
     loadingMensagens, savingMensagens,
     abrirModalMensagens, toggleMensagem, salvarMensagensDoGrupo,
     syncData,
-    extrairContatosAgora
+    extrairContatosAgora,
+    selectedGroupIds, setSelectedGroupIds,
+    toggleSelectGroup, toggleSelectAll, clearSelection, finalizeBulkDelete
   };
 };
+

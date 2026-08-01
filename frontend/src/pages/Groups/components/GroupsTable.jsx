@@ -13,8 +13,14 @@ const GroupsTable = ({
   setDeletingId,
   onOpenNewGroupForm,
   extrairContatosAgora,
-  openConfirm
+  openConfirm,
+  selectedGroupIds = [],
+  toggleSelectGroup,
+  toggleSelectAll,
+  clearSelection,
+  finalizeBulkDelete
 }) => {
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos'); // 'todos' | 'ativos' | 'inativos' | 'alerta'
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -377,6 +383,104 @@ const GroupsTable = ({
       )}
 
 
+      {/* Barra de Ações em Massa */}
+      {selectedGroupIds.length > 0 && (
+        <div style={{
+          padding: '0.85rem 1.5rem',
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98))',
+          borderBottom: '1px solid rgba(59, 130, 246, 0.35)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ 
+              background: 'var(--primary)', 
+              color: '#fff', 
+              fontSize: '0.8rem', 
+              fontWeight: 800, 
+              padding: '3px 10px', 
+              borderRadius: '12px' 
+            }}>
+              {selectedGroupIds.length} Selecionado(s)
+            </span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>
+              Ações em Massa Disponíveis:
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => toggleSelectAll && toggleSelectAll(gruposFiltrados)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              Selecionar Todos os {gruposFiltrados.length} Filtrados
+            </button>
+
+            <button
+              type="button"
+              onClick={() => clearSelection && clearSelection()}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: 'var(--text-dim)',
+                cursor: 'pointer'
+              }}
+            >
+              Limpar Seleção
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof openConfirm === 'function') {
+                  openConfirm({
+                    title: 'Confirmar Exclusão em Massa',
+                    message: `Tem certeza que deseja excluir permanentemente os ${selectedGroupIds.length} grupo(s) selecionado(s)? Esta ação removerá o monitoramento e o histórico de todos eles.`,
+                    type: 'danger',
+                    confirmText: `Excluir ${selectedGroupIds.length} Grupos`,
+                    onConfirm: () => finalizeBulkDelete && finalizeBulkDelete()
+                  });
+                }
+              }}
+              style={{
+                padding: '7px 16px',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.9))',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)'
+              }}
+            >
+              <Trash2 size={14} /> Excluir Selecionados ({selectedGroupIds.length})
+            </button>
+          </div>
+        </div>
+      )}
+
       {gruposFiltrados.length === 0 ? (
         <div style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', margin: '0 auto 1rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -391,18 +495,51 @@ const GroupsTable = ({
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <th style={{ padding: '11px 16px', width: '40px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={gruposPaginados.length > 0 && gruposPaginados.every(g => selectedGroupIds.includes(g.id))}
+                    onChange={() => toggleSelectAll && toggleSelectAll(gruposPaginados)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary)' }}
+                    title="Selecionar todos os grupos desta página"
+                  />
+                </th>
                 {['Nome / Grupo ID', 'Ciclo', 'Membros', 'Dia Atual', 'Ações'].map((h, i) => (
                   <th key={h} style={{ padding: '11px 20px', textAlign: i === 4 ? 'right' : 'left', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {gruposPaginados.map((g, idx) => (
-                <tr key={g.id} style={{ borderBottom: '1px solid var(--border)', opacity: g.ativo ? 1 : 0.45, background: editingId === g.id ? 'rgba(37,99,235,0.05)' : idx % 2 !== 0 ? 'rgba(255,255,255,0.012)' : 'transparent' }}>
-                  <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.25))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 700, color: 'var(--accent)' }}>{getGroupInitials(g.nome)}</div>
-                      <div>
+              {gruposPaginados.map((g, idx) => {
+                const isSelected = selectedGroupIds.includes(g.id);
+                return (
+                  <tr 
+                    key={g.id} 
+                    style={{ 
+                      borderBottom: '1px solid var(--border)', 
+                      opacity: g.ativo ? 1 : 0.45, 
+                      background: isSelected 
+                        ? 'rgba(37,99,235,0.15)' 
+                        : editingId === g.id 
+                        ? 'rgba(37,99,235,0.05)' 
+                        : idx % 2 !== 0 
+                        ? 'rgba(255,255,255,0.012)' 
+                        : 'transparent' 
+                    }}
+                  >
+                    <td style={{ padding: '14px 16px', width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectGroup && toggleSelectGroup(g.id)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary)' }}
+                      />
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.25))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 700, color: 'var(--accent)' }}>{getGroupInitials(g.nome)}</div>
+                        <div>
+
                         <div style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {g.nome}
                           {editingId === g.id && <span className="badge-warning">Editando</span>}
@@ -511,10 +648,11 @@ const GroupsTable = ({
                       <button onClick={() => handleToggle(g.id)} disabled={!!editingId} className="btn-icon-warning" title={g.ativo ? "Pausar" : "Ativar"}>{g.ativo ? <PauseCircle size={14} /> : <PlayCircle size={14} />}</button>
                       <button onClick={() => setDeletingId(g.id)} disabled={!!editingId} className="btn-icon-danger" title="Excluir"><Trash2 size={14} /></button>
                     </div>
-                  </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
+
           </table>
         </div>
       )}

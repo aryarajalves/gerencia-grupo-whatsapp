@@ -134,6 +134,25 @@ def deletar_grupo(grupo_id: uuid.UUID, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Grupo deletado com sucesso"}
 
+@router.post("/grupos/bulk-delete", dependencies=[Depends(security.get_api_key)])
+def deletar_grupos_em_massa(payload: schemas.GrupoBulkDelete, db: Session = Depends(get_db)):
+    cid = get_active_client_id(db)
+    if not payload.grupo_ids:
+        return {"message": "Nenhum grupo informado para exclusão", "deleted_count": 0}
+    
+    grupos_db = db.query(models.GrupoWhatsApp).filter(
+        models.GrupoWhatsApp.id.in_(payload.grupo_ids),
+        or_(models.GrupoWhatsApp.cliente_id == cid, models.GrupoWhatsApp.cliente_id.is_(None))
+    ).all()
+    
+    count = len(grupos_db)
+    for g in grupos_db:
+        db.delete(g)
+    
+    db.commit()
+    return {"message": f"{count} grupo(s) excluído(s) com sucesso", "deleted_count": count}
+
+
 @router.get("/grupos/{grupo_id}/mensagens/", dependencies=[Depends(security.get_api_key)])
 def listar_mensagens_do_grupo(grupo_id: uuid.UUID, db: Session = Depends(get_db)):
     ids = db.query(models.GrupoMensagem.mensagem_id).filter(

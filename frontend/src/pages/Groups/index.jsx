@@ -18,7 +18,8 @@ const GerenciarGrupos = ({ grupos, setGrupos, mensagens, onRefresh, openConfirm 
     loadingMensagens, savingMensagens,
     abrirModalMensagens, toggleMensagem, salvarMensagensDoGrupo,
     deletingId, setDeletingId, syncData,
-    extrairContatosAgora
+    extrairContatosAgora,
+    selectedGroupIds, toggleSelectGroup, toggleSelectAll, clearSelection, finalizeBulkDelete
   } = useGroups(onRefresh, setGrupos, openConfirm);
 
   const { copiedId, handleCopy } = useCopy();
@@ -28,11 +29,13 @@ const GerenciarGrupos = ({ grupos, setGrupos, mensagens, onRefresh, openConfirm 
     if (deletingId) {
       const grupo = grupos.find(g => g.id === deletingId);
       if (grupo) {
-        openConfirm(
-          'Confirmar Exclusão',
-          `Tem certeza que deseja excluir o grupo "${grupo.nome}"? Esta ação removerá o monitoramento e histórico deste grupo permanentemente.`,
-          () => finalizeDelete(deletingId)
-        );
+        openConfirm({
+          title: 'Confirmar Exclusão',
+          message: `Tem certeza que deseja excluir o grupo "${grupo.nome}"? Esta ação removerá o monitoramento e histórico deste grupo permanentemente.`,
+          type: 'danger',
+          confirmText: 'Excluir Grupo',
+          onConfirm: () => finalizeDelete(deletingId)
+        });
         setDeletingId(null);
       }
     }
@@ -174,8 +177,14 @@ const GerenciarGrupos = ({ grupos, setGrupos, mensagens, onRefresh, openConfirm 
           onOpenNewGroupForm={() => setActiveSubTab('form')}
           extrairContatosAgora={extrairContatosAgora}
           openConfirm={openConfirm}
+          selectedGroupIds={selectedGroupIds}
+          toggleSelectGroup={toggleSelectGroup}
+          toggleSelectAll={toggleSelectAll}
+          clearSelection={clearSelection}
+          finalizeBulkDelete={finalizeBulkDelete}
         />
       )}
+
 
       {mensagensModalGrupo && (
         <MessagesModal 

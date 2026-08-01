@@ -43,7 +43,11 @@ class GrupoWhatsAppBase(BaseModel):
 class GrupoWhatsAppCreate(GrupoWhatsAppBase):
     pass
 
+class GrupoBulkDelete(BaseModel):
+    grupo_ids: List[uuid.UUID]
+
 class GrupoWhatsApp(GrupoWhatsAppBase):
+
     id: uuid.UUID
     total_mensagens: int = 0
     tem_disparo_hoje: Optional[bool] = False
