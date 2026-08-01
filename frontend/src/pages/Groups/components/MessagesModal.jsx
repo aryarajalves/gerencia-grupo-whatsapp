@@ -232,12 +232,14 @@ const MessagesModal = ({
                             <div 
                               key={day} 
                               className="funnel-node"
+                              onWheel={(e) => e.stopPropagation()}
                               style={{
                                 border: temAtiva ? '1.5px solid rgba(16, 185, 129, 0.45)' : '1px solid rgba(255, 255, 255, 0.08)',
                                 boxShadow: temAtiva ? '0 10px 35px rgba(16, 185, 129, 0.15)' : '0 20px 50px rgba(0, 0, 0, 0.5)',
                                 transition: 'all 0.3s ease'
                               }}
                             >
+
                               <div 
                                 className="funnel-node-header"
                                 style={{
