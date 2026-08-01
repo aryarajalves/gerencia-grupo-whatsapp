@@ -177,8 +177,10 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
                     conteudo = f"[Nome do Grupo Alterado para: {conteudo}]"
                 elif tipo_m in ["status_grupo", "abrir_fechar_grupo"]:
                     val = (conteudo or "").lower().strip()
-                    acao_str = "Fechado (Apenas Admins)" if ("fechar" in val or "close" in val or "fechado" in val or "announcement" in val) else "Aberto (Todos enviam)"
+                    is_fechar = ("fechar" in val or "close" in val or "fechado" in val or "announcement" in val)
+                    acao_str = "Fechado (Apenas Admins)" if is_fechar else "Aberto (Todos enviam)"
                     conteudo = f"[Status do Grupo: {acao_str}]"
+                    media_type = "status_grupo"
                 elif tipo_m == "enquete":
 
                     media_type = "enquete"

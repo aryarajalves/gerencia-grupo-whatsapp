@@ -32,7 +32,63 @@ const MessageList = ({
             <RefreshCw size={40} className="animate-spin" />
           </div>
         ) : (
-          messages.map((msg, idx) => (
+          messages.map((msg, idx) => {
+            // ── Notificação de status do grupo (não é bolha de chat) ──
+            const isStatusGrupo = msg.media_type === 'status_grupo' ||
+              (msg.message_content && msg.message_content.startsWith('[Status do Grupo:'));
+
+            if (isStatusGrupo) {
+              const isFechar = msg.message_content && msg.message_content.includes('Fechado');
+              return (
+                <div
+                  key={msg.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '4px 0',
+                    alignSelf: 'center',
+                    width: '100%',
+                  }}
+                >
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    background: isFechar
+                      ? 'rgba(251, 146, 60, 0.12)'
+                      : 'rgba(16, 185, 129, 0.12)',
+                    border: `1px solid ${isFechar ? 'rgba(251,146,60,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                    borderRadius: '999px',
+                    padding: '6px 14px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: isFechar ? '#fb923c' : '#10b981',
+                    letterSpacing: '0.02em',
+                    backdropFilter: 'blur(8px)',
+                    boxShadow: isFechar
+                      ? '0 2px 10px rgba(251,146,60,0.08)'
+                      : '0 2px 10px rgba(16,185,129,0.08)',
+                  }}>
+                    <span style={{ fontSize: '0.85rem' }}>{isFechar ? '🔒' : '🔓'}</span>
+                    <span>
+                      {isFechar ? 'Grupo fechado — somente admins' : 'Grupo aberto — todos podem enviar'}
+                    </span>
+                    <span style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 400,
+                      opacity: 0.6,
+                      marginLeft: '4px',
+                    }}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            // ── Bolha normal de chat ──
+            return (
             <div 
               key={msg.id} 
               style={{ 
@@ -170,7 +226,8 @@ const MessageList = ({
                 </button>
               </div>
             </div>
-          ))
+           );
+          })
         )}
         {messages.length === 0 && !loading && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', gap: '15px' }}>
