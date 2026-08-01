@@ -201,6 +201,14 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
                     media_type = "audio"
                     media_payload = message_dict.get("audioMessage") or msg.get("audioMessage") or (msg.get("audio") if isinstance(msg.get("audio"), dict) else None) or message_dict or msg
                     msg_body = ""
+                elif "pollCreationMessage" in message_dict or "pollCreationMessage" in msg or msg_type in ["poll", "enquete", "pollcreation"]:
+                    media_type = "enquete"
+                    poll_payload = message_dict.get("pollCreationMessage") or msg.get("pollCreationMessage") or {}
+                    msg_body = poll_payload.get("name") or poll_payload.get("title") or msg.get("text") or msg.get("body") or "Enquete"
+                    opts = poll_payload.get("options") or poll_payload.get("pollOptions") or []
+                    if isinstance(opts, list) and opts:
+                        opt_names = [o.get("optionName") or o.get("name") or str(o) for o in opts if isinstance(o, (dict, str))]
+                        media_url = "|".join([n for n in opt_names if n])
                 elif "conversation" in message_dict:
                     msg_body = message_dict["conversation"]
                 elif "extendedTextMessage" in message_dict:

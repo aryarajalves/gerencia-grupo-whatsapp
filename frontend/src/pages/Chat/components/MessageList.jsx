@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Shield, Trash2, FileText, MessageCircle, ChevronDown } from 'lucide-react';
+import { RefreshCw, Shield, Trash2, FileText, MessageCircle, ChevronDown, BarChart2 } from 'lucide-react';
 
 const MessageList = ({ 
   loading, 
@@ -65,44 +65,72 @@ const MessageList = ({
                   position: 'relative',
                   minWidth: '60px'
                 }}>
-                  {msg.media_url && (
-                    <div style={{ marginBottom: '8px', borderRadius: '8px', overflow: 'hidden' }}>
-                      {(msg.media_type === 'imagem' || msg.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(msg.media_url)) ? (
-                        <img 
-                          src={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
-                          alt="Mídia" 
-                          crossOrigin="anonymous"
-                          style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', display: 'block', cursor: 'zoom-in' }} 
-                          onClick={() => window.open(msg.media_url, '_blank')}
-                        />
-                      ) : (msg.media_type === 'video' || /\.(mp4|webm|mkv|mov)(\?.*)?$/i.test(msg.media_url)) ? (
-                        <video 
-                          src={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
-                          controls 
-                          style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', display: 'block' }} 
-                        />
-                      ) : (msg.media_type === 'audio' || msg.media_type === 'ptt' || /\.(mp3|ogg|wav|aac|m4a)(\?.*)?$/i.test(msg.media_url)) ? (
-                        <audio 
-                          src={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
-                          controls 
-                          style={{ width: '100%', minWidth: '200px' }} 
-                        />
+                  {msg.media_type === 'enquete' || msg.media_type === 'poll' ? (
+                    <div style={{ minWidth: '220px', padding: '4px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', marginBottom: '8px' }}>
+                        <BarChart2 size={15} /> ENQUETE
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '10px', whiteSpace: 'pre-wrap' }}>
+                        {msg.message_content}
+                      </div>
+                      {msg.media_url ? (
+                        msg.media_url.split('|').map((opt, i) => (
+                          <div key={i} style={{ 
+                            display: 'flex', alignItems: 'center', gap: '10px', 
+                            padding: '8px 12px', background: 'rgba(0, 0, 0, 0.2)', 
+                            border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '10px', 
+                            marginBottom: '6px', fontSize: '0.85rem', fontWeight: 500 
+                          }}>
+                            <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.5)', flexShrink: 0 }} />
+                            <span>{opt}</span>
+                          </div>
+                        ))
                       ) : (
-                        <a 
-                          href={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', color: 'var(--primary)', textDecoration: 'none' }}
-                        >
-                          <FileText size={20} />
-                          <span style={{ fontSize: '0.85rem' }}>Ver Arquivo / Mídia</span>
-                        </a>
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontStyle: 'italic' }}>Enquete disparada via WhatsApp</div>
                       )}
                     </div>
-                  )}
-                  
-                  {msg.message_content && (
-                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.message_content}</div>
+                  ) : (
+                    <>
+                      {msg.media_url && (
+                        <div style={{ marginBottom: '8px', borderRadius: '8px', overflow: 'hidden' }}>
+                          {(msg.media_type === 'imagem' || msg.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(msg.media_url)) ? (
+                            <img 
+                              src={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
+                              alt="Mídia" 
+                              crossOrigin="anonymous"
+                              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', display: 'block', cursor: 'zoom-in' }} 
+                              onClick={() => window.open(msg.media_url, '_blank')}
+                            />
+                          ) : (msg.media_type === 'video' || /\.(mp4|webm|mkv|mov)(\?.*)?$/i.test(msg.media_url)) ? (
+                            <video 
+                              src={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
+                              controls 
+                              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', display: 'block' }} 
+                            />
+                          ) : (msg.media_type === 'audio' || msg.media_type === 'ptt' || /\.(mp3|ogg|wav|aac|m4a)(\?.*)?$/i.test(msg.media_url)) ? (
+                            <audio 
+                              src={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
+                              controls 
+                              style={{ width: '100%', minWidth: '200px' }} 
+                            />
+                          ) : (
+                            <a 
+                              href={msg.media_url.startsWith('http') ? `${import.meta.env.VITE_API_URL}/captura/media-proxy?url=${encodeURIComponent(msg.media_url)}` : msg.media_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', color: 'var(--primary)', textDecoration: 'none' }}
+                            >
+                              <FileText size={20} />
+                              <span style={{ fontSize: '0.85rem' }}>Ver Arquivo / Mídia</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      
+                      {msg.message_content && (
+                        <div style={{ whiteSpace: 'pre-wrap' }}>{msg.message_content}</div>
+                      )}
+                    </>
                   )}
                   <div style={{ 
                     fontSize: '0.65rem', 

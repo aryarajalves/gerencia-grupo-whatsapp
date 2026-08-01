@@ -129,6 +129,16 @@ def enviar_wapi(grupo, msg, db):
                 media_type = None
                 if tipo_m == "nome_grupo":
                     conteudo = f"[Nome do Grupo Alterado para: {conteudo}]"
+                elif tipo_m == "enquete":
+                    media_type = "enquete"
+                    opcoes_raw = getattr(msg, 'opcoes_enquete', None) or (payload.get("poll") if isinstance(payload, dict) else None)
+                    if isinstance(opcoes_raw, list):
+                        media_url = "|".join([str(o).strip() for o in opcoes_raw if str(o).strip()])
+                    elif isinstance(opcoes_raw, str) and opcoes_raw.strip():
+                        arr = [opt.strip() for opt in opcoes_raw.split('\n') if opt.strip()]
+                        media_url = "|".join(arr)
+                    else:
+                        media_url = "Sim|Não"
                 elif tipo_m in ["imagem", "video", "audio", "arquivo", "documento"]:
                     media_url = link_m
                     media_type = "imagem" if tipo_m == "imagem" else "video" if tipo_m == "video" else "audio" if tipo_m == "audio" else "arquivo"
