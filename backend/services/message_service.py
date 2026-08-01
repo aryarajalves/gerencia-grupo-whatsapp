@@ -73,12 +73,23 @@ def montar_payload(grupo, msg):
         }
         return payload_custom, tipo
     elif tipo in ["status_grupo", "abrir_fechar_grupo"]:
-        val = (msg.mensagem or "").lower().strip()
-        is_fechar = "fechar" in val or "close" in val or "fechado" in val or "announcement" in val
+        val_midia = (getattr(msg, 'link_midia', '') or '').lower().strip()
+        val_msg = (getattr(msg, 'mensagem', '') or '').lower().strip()
+        
+        if val_midia in ["fechar", "abrir"]:
+            is_fechar = (val_midia == "fechar")
+        else:
+            is_fechar = ("fechar" in val_msg or "close" in val_msg or "fechado" in val_msg or "announcement" in val_msg)
+
+        optional_text = ""
+        if val_msg and val_msg not in ["fechar", "abrir", "close", "open"]:
+            optional_text = getattr(msg, 'mensagem', '') or ''
+
         payload_custom = {
             "groupId": grupo.id_do_grupo,
             "adminOnlyMessage": is_fechar,
-            "adminOnlySettings": True
+            "adminOnlySettings": True,
+            "_optional_text": optional_text
         }
         return payload_custom, "status_grupo"
 
@@ -113,6 +124,10 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
         return False, detalhes
 
     payload, tipo = montar_payload(grupo, msg)
+    optional_text = ""
+    if tipo == "status_grupo" and isinstance(payload, dict):
+        optional_text = payload.pop("_optional_text", "")
+
     endpoint = ENDPOINT_MAP.get(tipo, "/message/send-text")
     
     if "{id}" in endpoint:
@@ -126,6 +141,20 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
         if response.status_code in (200, 201):
             data = response.json()
             registrar_log(db, grupo.nome, msg.mensagem or msg.tipo_de_mensagem, "Sucesso", msg_id=msg.id if hasattr(msg, 'id') else None, tipo=msg.tipo_de_mensagem, cliente_id=cid)
+
+            # Se for alteracao de status e houver mensagem de texto opcional configurada, dispara o texto no grupo
+            if tipo == "status_grupo" and optional_text.strip():
+                try:
+                    import time
+                    time.sleep(1)
+                    msg_texto = models.MensagemDisparada(
+                        mensagem=optional_text.strip(),
+                        tipo_de_mensagem="texto"
+                    )
+                    enviar_wapi(grupo, msg_texto, db, sender_name, sender_number)
+                except Exception as ex_opt:
+                    logger.error(f"Erro ao enviar texto opcional apos alteracao do grupo: {ex_opt}")
+
             
             try:
                 whatsapp_id = None

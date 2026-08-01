@@ -143,44 +143,61 @@ const MessageForm = ({
         <div style={{ display: 'grid', gridTemplateColumns: (novaMensagem.tipo_de_mensagem !== 'texto' && novaMensagem.tipo_de_mensagem !== 'nome_grupo' && novaMensagem.tipo_de_mensagem !== 'status_grupo') ? '1fr 320px' : '1fr', gap: '1.5rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             {novaMensagem.tipo_de_mensagem === 'status_grupo' ? (
-              <div>
-                <label className="label-premium"><Lock size={12} /> Ação de Permissão do Grupo</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setNovaMensagem({ ...novaMensagem, mensagem: 'fechar' })}
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      padding: '1.25rem', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s',
-                      border: '2px solid',
-                      borderColor: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? '#ec4899' : 'var(--border)',
-                      background: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? 'rgba(236,72,153,0.12)' : 'rgba(255,255,255,0.02)',
-                      color: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? '#ec4899' : 'var(--text-dim)',
-                      boxShadow: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? '0 0 16px rgba(236,72,153,0.2)' : 'none'
-                    }}
-                  >
-                    <div style={{ fontSize: '1.5rem' }}>🔒</div>
-                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>Fechar Grupo</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'center' }}>Apenas administradores podem enviar mensagens</span>
-                  </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label className="label-premium"><Lock size={12} /> Ação de Permissão do Grupo</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setNovaMensagem({ ...novaMensagem, link_midia: 'fechar' })}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '1.25rem', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s',
+                        border: '2px solid',
+                        borderColor: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? 'var(--border)' : '#ec4899',
+                        background: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? 'rgba(255,255,255,0.02)' : 'rgba(236,72,153,0.12)',
+                        color: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? 'var(--text-dim)' : '#ec4899',
+                        boxShadow: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? 'none' : '0 0 16px rgba(236,72,153,0.2)'
+                      }}
+                    >
+                      <div style={{ fontSize: '1.5rem' }}>🔒</div>
+                      <span style={{ fontWeight: 800, fontSize: '1rem' }}>Fechar Grupo</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'center' }}>Apenas administradores podem enviar mensagens</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setNovaMensagem({ ...novaMensagem, mensagem: 'abrir' })}
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      padding: '1.25rem', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s',
-                      border: '2px solid',
-                      borderColor: novaMensagem.mensagem === 'abrir' ? '#10b981' : 'var(--border)',
-                      background: novaMensagem.mensagem === 'abrir' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.02)',
-                      color: novaMensagem.mensagem === 'abrir' ? '#10b981' : 'var(--text-dim)',
-                      boxShadow: novaMensagem.mensagem === 'abrir' ? '0 0 16px rgba(16,185,129,0.2)' : 'none'
-                    }}
-                  >
-                    <div style={{ fontSize: '1.5rem' }}>🔓</div>
-                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>Abrir Grupo</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'center' }}>Todos os participantes podem enviar mensagens</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setNovaMensagem({ ...novaMensagem, link_midia: 'abrir' })}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '1.25rem', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s',
+                        border: '2px solid',
+                        borderColor: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? '#10b981' : 'var(--border)',
+                        background: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.02)',
+                        color: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? '#10b981' : 'var(--text-dim)',
+                        boxShadow: (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? '0 0 16px rgba(16,185,129,0.2)' : 'none'
+                      }}
+                    >
+                      <div style={{ fontSize: '1.5rem' }}>🔓</div>
+                      <span style={{ fontWeight: 800, fontSize: '1rem' }}>Abrir Grupo</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'center' }}>Todos os participantes podem enviar mensagens</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label-premium">
+                    <MessageSquare size={12} /> Mensagem de Texto Junto à Alteração (Opcional)
+                  </label>
+                  <textarea 
+                    value={(novaMensagem.mensagem === 'fechar' || novaMensagem.mensagem === 'abrir') ? '' : (novaMensagem.mensagem || '')} 
+                    onChange={e => setNovaMensagem({ ...novaMensagem, mensagem: e.target.value, link_midia: novaMensagem.link_midia || ((novaMensagem.mensagem === 'abrir') ? 'abrir' : 'fechar') })} 
+                    placeholder="Digite a mensagem a ser enviada no grupo junto com a ação (deixe em branco se não desejar enviar nenhuma mensagem)..." 
+                    style={{ width: '100%', minHeight: '100px', resize: 'vertical', fontSize: '1rem', lineHeight: '1.5', padding: '1rem' }} 
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontStyle: 'italic', display: 'block', marginTop: '4px' }}>
+                    * Se deixar este campo em branco, apenas a permissão do grupo será alterada, sem disparar mensagem de texto.
+                  </span>
                 </div>
               </div>
             ) : (
@@ -205,6 +222,7 @@ const MessageForm = ({
                 />
               </>
             )}
+
           </div>
 
           {(novaMensagem.tipo_de_mensagem !== 'texto' && novaMensagem.tipo_de_mensagem !== 'nome_grupo' && novaMensagem.tipo_de_mensagem !== 'status_grupo') && (

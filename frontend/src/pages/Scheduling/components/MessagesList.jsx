@@ -136,10 +136,25 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
                       }}>
                         {m.tipo_de_mensagem === 'nome_grupo' 
                           ? `Alterar nome para: "${m.mensagem}"` 
-                          : m.tipo_de_mensagem === 'status_grupo'
-                          ? (m.mensagem === 'abrir' ? '🔓 Abrir Grupo (Todos os participantes enviam)' : '🔒 Fechar Grupo (Apenas administradores enviam)')
+                          : m.tipo_de_mensagem === 'status_grupo' ? (
+                            <div>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', background: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? 'rgba(16,185,129,0.15)' : 'rgba(236,72,153,0.15)', color: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '#10b981' : '#ec4899', border: '1px solid', borderColor: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? 'rgba(16,185,129,0.3)' : 'rgba(236,72,153,0.3)' }}>
+                                {(m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '🔓 Abrir Grupo (Todos enviam)' : '🔒 Fechar Grupo (Apenas admins enviam)'}
+                              </div>
+                              {(m.mensagem && m.mensagem !== 'abrir' && m.mensagem !== 'fechar') ? (
+                                <div style={{ marginTop: '6px', fontSize: '0.9rem', color: 'var(--text-main)', fontStyle: 'normal' }}>
+                                  💬 <strong>Mensagem:</strong> "{m.mensagem}"
+                                </div>
+                              ) : (
+                                <div style={{ marginTop: '4px', fontSize: '0.75rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                                  (Sem mensagem de texto enviada)
+                                </div>
+                              )}
+                            </div>
+                          )
                           : (m.mensagem || '(Mídia sem legenda)')
                         }
+
 
                       </div>
 

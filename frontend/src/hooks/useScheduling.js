@@ -46,7 +46,12 @@ export const useScheduling = (onRefresh) => {
     try {
       let finalLink = novaMensagem.link_midia;
 
-      if (file) {
+      if (novaMensagem.tipo_de_mensagem === 'status_grupo') {
+        const action = (novaMensagem.link_midia === 'abrir' || novaMensagem.mensagem === 'abrir') ? 'abrir' : 'fechar';
+        const optText = (novaMensagem.mensagem === 'fechar' || novaMensagem.mensagem === 'abrir') ? '' : (novaMensagem.mensagem || '');
+        finalLink = action;
+        novaMensagem.mensagem = optText;
+      } else if (file) {
         const formData = new FormData();
         formData.append('file', file);
         const uploadRes = await axiosInstance.post('/upload/', formData, {
@@ -92,12 +97,16 @@ export const useScheduling = (onRefresh) => {
 
   const startEdit = (m) => {
     setEditingId(m.id);
+    const isStatus = (m.tipo_de_mensagem === 'status_grupo');
+    const act = m.link_midia || (m.mensagem === 'abrir' ? 'abrir' : 'fechar');
+    const txt = (m.mensagem === 'fechar' || m.mensagem === 'abrir') ? '' : (m.mensagem || '');
+
     setNovaMensagem({
-      mensagem: m.mensagem || '',
+      mensagem: isStatus ? txt : (m.mensagem || ''),
       horario_do_disparo: m.horario_do_disparo || '',
       dia_do_lancamento: m.dia_do_lancamento || 1,
       tipo_de_mensagem: m.tipo_de_mensagem || 'texto',
-      link_midia: m.link_midia || '',
+      link_midia: isStatus ? act : (m.link_midia || ''),
       opcoes_enquete: m.opcoes_enquete || '',
       enquete_multipla: m.enquete_multipla || false,
       grupo_ids: m.grupo_ids || []
@@ -106,6 +115,7 @@ export const useScheduling = (onRefresh) => {
     setActiveSubTab('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
 
   const cancelEdit = () => {
     setEditingId(null);
