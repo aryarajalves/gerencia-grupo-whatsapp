@@ -185,29 +185,8 @@ const GroupsTable = ({
               </option>
             )}
           </select>
-
-          {/* Botão Atalho Rápido: Com Disparo Hoje */}
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter(prev => prev === 'disparo_hoje' ? 'todos' : 'disparo_hoje');
-              setCurrentPage(1);
-            }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700,
-              background: statusFilter === 'disparo_hoje' 
-                ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.2))' 
-                : 'rgba(255, 255, 255, 0.04)',
-              color: statusFilter === 'disparo_hoje' ? '#38bdf8' : 'var(--text-dim)',
-              border: `1px solid ${statusFilter === 'disparo_hoje' ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
-              cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: statusFilter === 'disparo_hoje' ? '0 0 12px rgba(56, 189, 248, 0.25)' : 'none'
-            }}
-          >
-            ⚡ Com Disparo Hoje ({countDisparoHoje})
-          </button>
         </div>
+
 
 
 
