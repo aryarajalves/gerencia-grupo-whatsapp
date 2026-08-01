@@ -248,11 +248,12 @@ const GroupsTable = ({
                                 message: `Deseja iniciar a busca e sincronização manual de contatos para o grupo "${g.nome}"? Os contatos encontrados serão salvos e despachados via webhook.`,
                                 type: 'info',
                                 confirmText: 'Extrair Agora',
-                                onConfirm: () => extrairContatosAgora(g.id)
+                                onConfirm: () => extrairContatosAgora(g.id, g.nome)
                               });
                             } else {
-                              extrairContatosAgora(g.id);
+                              extrairContatosAgora(g.id, g.nome);
                             }
+
                           }} 
                           disabled={!!editingId} 
                           className="btn-icon-accent" 

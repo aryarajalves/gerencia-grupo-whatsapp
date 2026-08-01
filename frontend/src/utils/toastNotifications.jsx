@@ -1,6 +1,6 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
-import { Trash2, X, CheckCircle2 } from 'lucide-react';
+import { Trash2, X, CheckCircle2, RefreshCw } from 'lucide-react';
 
 export const toastDeletado = (titulo = 'Grupo Excluído', detalhe = '') => {
   toast.custom(
@@ -101,4 +101,95 @@ export const toastSucesso = (titulo = 'Sucesso', detalhe = '') => {
 
 export const toastErro = (titulo = 'Erro', detalhe = '') => {
   toast.error(detalhe ? `${titulo}: ${detalhe}` : titulo, { duration: 4000, position: 'top-right' });
+};
+
+export const toastExtraindo = (nomeGrupo = '') => {
+  return toast.custom(
+    (t) => (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '14px',
+          background: 'linear-gradient(135deg, rgba(20, 26, 38, 0.95), rgba(18, 18, 24, 0.95))',
+          border: '1px solid rgba(124, 58, 237, 0.4)',
+          borderRadius: '14px',
+          padding: '16px 18px',
+          boxShadow: '0 10px 30px rgba(124, 58, 237, 0.2), 0 4px 20px rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(12px)',
+          maxWidth: '380px',
+          width: '100%',
+          opacity: t.visible ? 1 : 0,
+          transform: t.visible ? 'translateY(0) scale(1)' : 'translateY(-10px) scale(0.95)',
+          transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          pointerEvents: 'auto',
+        }}
+      >
+        <div
+          style={{
+            flexShrink: 0,
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(37, 99, 235, 0.15))',
+            border: '1px solid rgba(124, 58, 237, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#a855f7',
+            boxShadow: '0 0 15px rgba(124, 58, 237, 0.2)',
+          }}
+        >
+          <RefreshCw size={20} className="spin" />
+        </div>
+
+        <div style={{ flex: 1, paddingRight: '8px' }}>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              color: '#c084fc',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            Extraindo Contatos...
+          </div>
+          <div
+            style={{
+              fontSize: '0.825rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              lineHeight: '1.4',
+            }}
+          >
+            {nomeGrupo ? `Buscando membros do grupo "${nomeGrupo}" e enviando via webhook.` : 'Buscando membros do grupo e disparando webhook.'}
+          </div>
+        </div>
+
+        <button
+          onClick={() => toast.dismiss(t.id)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'rgba(255, 255, 255, 0.4)',
+            cursor: 'pointer',
+            padding: '4px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.4)')}
+        >
+          <X size={16} />
+        </button>
+      </div>
+    ),
+    { duration: 6000, position: 'top-right' }
+  );
 };

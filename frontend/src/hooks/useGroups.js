@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../services/api';
-import { toastDeletado } from '../utils/toastNotifications';
+import { toast } from 'react-hot-toast';
+import { toastDeletado, toastExtraindo, toastSucesso, toastErro } from '../utils/toastNotifications';
 
 const initialGroupState = { 
   nome: '', 
@@ -210,27 +211,23 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
     }
   };
 
-  const extrairContatosAgora = async (grupoId) => {
+  const extrairContatosAgora = async (grupoId, grupoNome = '') => {
+    const toastId = toastExtraindo(grupoNome);
     setProcessing(true);
     try {
       const res = await axiosInstance.post(`/grupos/${grupoId}/extrair-contatos`);
+      toast.dismiss(toastId);
       onRefresh();
       window.dispatchEvent(new CustomEvent('config-updated'));
-      openConfirm({
-        title: 'Extração Concluída!',
-        message: res.data.message || 'Contatos extraídos com sucesso!',
-        type: 'success'
-      });
+      toastSucesso('Extração Concluída!', res.data.message || 'Contatos extraídos com sucesso!');
     } catch (error) {
-      openConfirm({
-        title: 'Erro na Extração',
-        message: 'Ocorreu um problema ao extrair contatos: ' + (error.response?.data?.detail || error.message),
-        type: 'danger'
-      });
+      toast.dismiss(toastId);
+      toastErro('Erro na Extração', error.response?.data?.detail || 'Ocorreu um problema ao extrair contatos.');
     } finally {
       setProcessing(false);
     }
   };
+
 
   return {
     activeSubTab, setActiveSubTab,
