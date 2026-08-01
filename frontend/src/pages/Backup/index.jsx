@@ -13,6 +13,7 @@ const Backup = ({ openConfirm }) => {
     s3_configurado: false
   });
 
+  const [backups, setBackups] = useState([]);
   const [frequencyType, setFrequencyType] = useState('hours');
   const [intervalValue, setIntervalValue] = useState(6);
   const [s3Folder, setS3Folder] = useState('backups/');
