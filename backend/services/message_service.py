@@ -77,7 +77,7 @@ def montar_payload(grupo, msg):
 
     return base, tipo
 
-def enviar_wapi(grupo, msg, db):
+def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number="Sistema"):
     """Envia a mensagem diretamente para o grupo via W-API."""
     cid = getattr(grupo, 'cliente_id', None) or getattr(msg, 'cliente_id', None)
     
@@ -119,7 +119,13 @@ def enviar_wapi(grupo, msg, db):
             try:
                 whatsapp_id = None
                 if isinstance(data, dict):
-                    whatsapp_id = data.get("id") or data.get("messageId") or data.get("key", {}).get("id")
+                    whatsapp_id = (
+                        data.get("id") or 
+                        data.get("messageId") or 
+                        data.get("key", {}).get("id") or
+                        data.get("data", {}).get("id") or
+                        data.get("response", {}).get("id")
+                    )
                 
                 tipo_m = getattr(msg, 'tipo_de_mensagem', None) or getattr(msg, 'tipo', None) or "texto"
                 conteudo = getattr(msg, 'mensagem', '') or ''
@@ -154,8 +160,8 @@ def enviar_wapi(grupo, msg, db):
                         cliente_id=cid,
                         message_id=whatsapp_id,
                         from_me=True,
-                        sender_name="Disparo Automático",
-                        sender_number="Sistema",
+                        sender_name=sender_name,
+                        sender_number=sender_number,
                         message_content=conteudo,
                         media_url=media_url,
                         media_type=media_type,
@@ -166,7 +172,7 @@ def enviar_wapi(grupo, msg, db):
                     db.add(msg_cap)
                     db.commit()
             except Exception as cap_err:
-                print(f"Erro ao salvar disparo automático em MensagemCapturada: {cap_err}")
+                print(f"Erro ao salvar mensagem em MensagemCapturada: {cap_err}")
 
             return True, data
         else:

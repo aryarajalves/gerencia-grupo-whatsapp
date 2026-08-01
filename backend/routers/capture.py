@@ -233,7 +233,7 @@ async def enviar_mensagem_chat(req: schemas.ChatSendMessage, db: Session = Depen
         cliente_id=cid
     )
 
-    success, result = scheduler.enviar_wapi(grupo, fake_msg, db)
+    success, result = scheduler.enviar_wapi(grupo, fake_msg, db, sender_name="Você", sender_number="Bot")
     if not success:
         raise HTTPException(status_code=502, detail=f"Erro na W-API: {result}")
 
@@ -242,20 +242,6 @@ async def enviar_mensagem_chat(req: schemas.ChatSendMessage, db: Session = Depen
         whatsapp_id = result.get("id") or result.get("messageId") or result.get("key", {}).get("id")
     
     print(f"Chat: Mensagem enviada para {req.group_jid}. WhatsApp ID extraído: {whatsapp_id}")
-
-    db_msg = models.MensagemCapturada(
-        cliente_id=cid,
-        message_id=whatsapp_id,
-        from_me=True,
-        sender_name="Você",
-        sender_number="Bot",
-        message_content=req.message,
-        group_jid=req.group_jid,
-        group_name=grupo.nome,
-        timestamp=datetime.now(scheduler.BR_TZ).replace(tzinfo=None)
-    )
-    db.add(db_msg)
-    db.commit()
 
     return {"status": "success", "message": "Mensagem enviada"}
 
@@ -359,25 +345,9 @@ async def enviar_midia_chat(
             cliente_id=cid
         )
 
-        success, result = scheduler.enviar_wapi(grupo, fake_msg, db)
+        success, result = scheduler.enviar_wapi(grupo, fake_msg, db, sender_name="Você", sender_number="Bot")
         if not success:
             raise HTTPException(status_code=502, detail=f"Erro na W-API: {result}")
-
-        db_msg = models.MensagemCapturada(
-            cliente_id=cid,
-            message_id=result.get("id") if isinstance(result, dict) else None,
-            from_me=True,
-            sender_name="Você",
-            sender_number="Bot",
-            message_content=caption,
-            media_url=file_url,
-            media_type=tipo_msg,
-            group_jid=group_jid,
-            group_name=grupo.nome,
-            timestamp=datetime.now(scheduler.BR_TZ).replace(tzinfo=None)
-        )
-        db.add(db_msg)
-        db.commit()
 
         return {"status": "success", "url": file_url}
         
