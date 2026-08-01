@@ -81,6 +81,20 @@ const Backup = ({ openConfirm }) => {
     }
   };
 
+  const handleRefreshAll = async () => {
+    try {
+      setLoadingInfo(true);
+      setLoadingList(true);
+      await Promise.all([fetchBackupInfo(), fetchBackupList()]);
+      toastSucesso('Dados Atualizados!', 'A lista de backups e informações do banco foram recarregadas com sucesso.');
+    } catch (err) {
+      toastErro('Erro ao Atualizar', 'Não foi possível recarregar as informações.');
+    } finally {
+      setLoadingInfo(false);
+      setLoadingList(false);
+    }
+  };
+
   useEffect(() => {
     fetchBackupInfo();
     fetchBackupList();
@@ -235,7 +249,8 @@ const Backup = ({ openConfirm }) => {
         </div>
 
         <button 
-          onClick={() => { fetchBackupInfo(); fetchBackupList(); }}
+          onClick={handleRefreshAll}
+          disabled={loadingInfo || loadingList}
           className="btn btn-secondary"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '10px' }}
         >
