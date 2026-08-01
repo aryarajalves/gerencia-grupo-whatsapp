@@ -1,7 +1,31 @@
-import React from 'react';
-import { Users, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, RefreshCw, Eye } from 'lucide-react';
+import axiosInstance from '../../../services/api';
 
-const ChatHeader = ({ selectedGroup, fetchMessages, loading }) => {
+const ChatHeader = ({ selectedGroup, fetchMessages, loading, onOpenContacts }) => {
+  const [contactCount, setContactCount] = useState(selectedGroup?.quantidade_contatos || 0);
+
+  useEffect(() => {
+    if (!selectedGroup?.id_do_grupo) return;
+    
+    let isMounted = true;
+    const fetchRealCount = async () => {
+      try {
+        const res = await axiosInstance.get('/contatos/', {
+          params: { jid_grupo: selectedGroup.id_do_grupo, limit: 1 }
+        });
+        if (isMounted && typeof res.data.total === 'number') {
+          setContactCount(res.data.total);
+        }
+      } catch (err) {
+        if (isMounted) setContactCount(selectedGroup.quantidade_contatos || 0);
+      }
+    };
+
+    fetchRealCount();
+    return () => { isMounted = false; };
+  }, [selectedGroup]);
+
   return (
     <div style={{ 
       padding: '1.25rem 1.75rem', 
@@ -56,10 +80,27 @@ const ChatHeader = ({ selectedGroup, fetchMessages, loading }) => {
           </div>
 
           <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button 
+              onClick={onOpenContacts}
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                padding: '2px 8px',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '5px',
+                fontSize: '0.78rem',
+                transition: 'all 0.2s'
+              }}
+              title="Clique para ver e copiar os contatos deste grupo"
+            >
               <Users size={13} style={{ color: 'var(--primary)' }} /> 
-              <strong>{selectedGroup.quantidade_contatos || 0}</strong> contatos
-            </span>
+              <strong>{contactCount}</strong> contatos
+              <Eye size={11} style={{ opacity: 0.6 }} />
+            </button>
             <span>•</span>
             <span style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
               ID: {selectedGroup.id_do_grupo}

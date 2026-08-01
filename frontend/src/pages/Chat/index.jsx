@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useChat } from './hooks/useChat';
 import GroupSidebar from './components/GroupSidebar';
 import ChatHeader from './components/ChatHeader';
 import MessageList from './components/MessageList';
 import MessageInput from './components/MessageInput';
+import GroupContactsModal from './components/GroupContactsModal';
 import './Chat.css';
 
 const Chat = ({ openConfirm }) => {
@@ -41,6 +42,8 @@ const Chat = ({ openConfirm }) => {
     fetchMessages
   } = useChat(openConfirm);
 
+  const [showContactsModal, setShowContactsModal] = useState(false);
+
   return (
     <div className="page-container" style={{ display: 'flex', gap: '20px', height: 'calc(100vh - 100px)', padding: '0' }}>
       <GroupSidebar 
@@ -73,6 +76,7 @@ const Chat = ({ openConfirm }) => {
               selectedGroup={selectedGroup}
               fetchMessages={fetchMessages}
               loading={loading}
+              onOpenContacts={() => setShowContactsModal(true)}
             />
 
             <MessageList 
@@ -116,6 +120,13 @@ const Chat = ({ openConfirm }) => {
           </div>
         )}
       </div>
+
+      {showContactsModal && selectedGroup && (
+        <GroupContactsModal 
+          group={selectedGroup}
+          onClose={() => setShowContactsModal(false)}
+        />
+      )}
     </div>
   );
 };
