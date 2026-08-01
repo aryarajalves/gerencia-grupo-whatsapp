@@ -2,9 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../services/api';
 import { toastDeletado } from '../utils/toastNotifications';
 
+const initialGroupState = { 
+  nome: '', 
+  id_do_grupo: '', 
+  dia_inicio_semana: 0, 
+  dia_fim_semana: 4, 
+  ativo: true, 
+  link_convite: '', 
+  tipo_ciclo: 'semanal',
+  extrair_contatos: true,
+  intervalo_extracao_minutos: 30,
+  webhook_extracao_url: ''
+};
+
 export const useGroups = (onRefresh, setGrupos, openConfirm) => {
   const [activeSubTab, setActiveSubTab] = useState('list'); // 'list' | 'form'
-  const [novoGrupo, setNovoGrupo] = useState({ nome: '', id_do_grupo: '', dia_inicio_semana: 0, dia_fim_semana: 4, ativo: true, link_convite: '', tipo_ciclo: 'semanal' });
+  const [novoGrupo, setNovoGrupo] = useState(initialGroupState);
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -45,7 +58,7 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
       } else {
         await axiosInstance.post('/grupos/', novoGrupo);
       }
-      setNovoGrupo({ nome: '', id_do_grupo: '', dia_inicio_semana: 0, dia_fim_semana: 4, ativo: true, link_convite: '', tipo_ciclo: 'semanal' });
+      setNovoGrupo(initialGroupState);
       setActiveSubTab('list');
       onRefresh();
     } catch (error) {
@@ -120,7 +133,8 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
       link_convite: grupo.link_convite || '',
       tipo_ciclo: grupo.tipo_ciclo || 'semanal',
       extrair_contatos: grupo.extrair_contatos !== undefined ? grupo.extrair_contatos : true,
-      intervalo_extracao_minutos: grupo.intervalo_extracao_minutos || 30
+      intervalo_extracao_minutos: grupo.intervalo_extracao_minutos || 30,
+      webhook_extracao_url: grupo.webhook_extracao_url || ''
     });
     setActiveSubTab('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });

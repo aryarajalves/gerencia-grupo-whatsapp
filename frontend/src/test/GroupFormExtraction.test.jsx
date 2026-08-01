@@ -35,5 +35,39 @@ describe('GroupForm - Configurações de Extração de Contatos', () => {
     expect(screen.getByText('Habilitada')).toBeInTheDocument();
     expect(screen.getByText('Desabilitada')).toBeInTheDocument();
     expect(screen.getByDisplayValue('A cada 30 minutos (Padrão)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('https://hook.plataforma.com/webhook/...')).toBeInTheDocument();
+  });
+
+  it('permite alterar o campo Webhook de Contatos', () => {
+    const novoGrupo = {
+      nome: 'Grupo Teste',
+      id_do_grupo: 'g1@g.us',
+      extrair_contatos: true,
+      webhook_extracao_url: 'https://webhook.site/abc'
+    };
+    const setNovoGrupo = vi.fn();
+
+    render(
+      <GroupForm 
+        novoGrupo={novoGrupo} 
+        setNovoGrupo={setNovoGrupo} 
+        onSubmit={vi.fn()} 
+        onCancel={vi.fn()} 
+        editingId={null} 
+        processing={false} 
+        wapiGrupos={[]} 
+        wapiLoading={false} 
+        wapiErro="" 
+      />
+    );
+
+    const input = screen.getByPlaceholderText('https://hook.plataforma.com/webhook/...');
+    expect(input.value).toBe('https://webhook.site/abc');
+
+    fireEvent.change(input, { target: { value: 'https://webhook.site/xyz' } });
+    expect(setNovoGrupo).toHaveBeenCalledWith(expect.objectContaining({
+      webhook_extracao_url: 'https://webhook.site/xyz'
+    }));
   });
 });
+
