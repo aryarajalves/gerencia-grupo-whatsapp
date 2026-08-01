@@ -69,19 +69,9 @@ def client(setup_db):
     app.dependency_overrides[security.get_current_user] = override_current_user
     app.dependency_overrides[security.check_super_admin] = override_current_user
     
-    # Desabilitar Rate Limiting para testes para evitar 429
-    
-    # Desabilitar Rate Limiting
-    from main import limiter
-    limiter.enabled = False
-    
     # Desabilitar Scheduler para não rodar jobs em background
     import scheduler
     scheduler.iniciar_agendador = lambda: None
-    
-    # Desabilitar Rate Limiting para não precisar de Redis nos testes
-    from main import limiter
-    limiter.enabled = False
     
     with TestClient(app) as c:
         yield c

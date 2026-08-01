@@ -3,25 +3,18 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 # Core imports
 import models, database, scheduler, migrations, security
 from core.logger import logger, setup_uvicorn_logging
+from core.limiter import rate_limit_middleware
 from database import SessionLocal
 
 # Router imports
 from routers import users, groups, messages, logs, webhooks, dashboard, media, config, contacts, group_sets, redirect, capture, clients, backup
 
-# Configuração Rate Limiting (Redis)
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
-limiter = Limiter(key_func=get_remote_address, storage_uri=REDIS_URL)
-
 app = FastAPI(title="Gerenciador de Grupos WhatsApp", version="1.5.0")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.middleware("http")(rate_limit_middleware)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -119,8 +112,7 @@ def startup_event():
 
 # Home / Health Check
 @app.get("/")
-@limiter.limit("5/minute")
-def home(request: Request):
+def home():
     return {"message": "API Gerenciador de Grupos WhatsApp Ativa"}
 
 # Register Routers
