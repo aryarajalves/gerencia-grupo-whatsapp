@@ -74,17 +74,14 @@ def montar_payload(grupo, msg):
         return payload_custom, tipo
     elif tipo in ["status_grupo", "abrir_fechar_grupo"]:
         val = (msg.mensagem or "").lower().strip()
-        if "fechar" in val or "close" in val or "fechado" in val or "announcement" in val:
-            action = "announcement"
-        else:
-            action = "not_announcement"
+        is_fechar = "fechar" in val or "close" in val or "fechado" in val or "announcement" in val
         payload_custom = {
             "groupId": grupo.id_do_grupo,
-            "action": action,
-            "setting": action,
-            "groupSetting": action
+            "adminOnlyMessage": is_fechar,
+            "adminOnlySettings": True
         }
         return payload_custom, "status_grupo"
+
     else:
         base["message"] = msg.mensagem
 

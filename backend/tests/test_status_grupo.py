@@ -23,7 +23,8 @@ def test_montar_payload_status_grupo_fechar():
     payload, tipo = montar_payload(grupo, msg)
     assert tipo == "status_grupo"
     assert payload["groupId"] == "120363123456@g.us"
-    assert payload["action"] == "announcement"
+    assert payload["adminOnlyMessage"] is True
+    assert payload["adminOnlySettings"] is True
 
 def test_montar_payload_status_grupo_abrir():
     grupo = DummyGrupo()
@@ -31,4 +32,6 @@ def test_montar_payload_status_grupo_abrir():
     payload, tipo = montar_payload(grupo, msg)
     assert tipo == "status_grupo"
     assert payload["groupId"] == "120363123456@g.us"
-    assert payload["action"] == "not_announcement"
+    assert payload["adminOnlyMessage"] is False
+    assert payload["adminOnlySettings"] is True
+
