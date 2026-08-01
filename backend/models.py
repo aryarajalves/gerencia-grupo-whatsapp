@@ -166,6 +166,8 @@ class ContatoGrupo(Base):
     nome_grupo = Column(String)
     no_grupo = Column(Boolean, default=True)
     extraido_em = Column(DateTime, default=get_br_time)
+    webhook_enviado = Column(Boolean, default=False)
+    webhook_enviado_em = Column(DateTime, nullable=True)
 
 
 class ConjuntoGrupo(Base):

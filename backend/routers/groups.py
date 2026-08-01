@@ -218,8 +218,9 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
         db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
         db.commit()
 
-        novos_contatos = []
-        todos_contatos = []
+        webhook_url = getattr(grupo, 'webhook_extracao_url', None)
+        grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
+        enviados_webhook_count = 0
 
         for p in participants:
             p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
@@ -229,38 +230,38 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
                 p_numero = p_numero.split("@")[0]
 
             p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
-            todos_contatos.append({"nome": p_nome, "numero": p_numero})
             
-            existe = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
-            if not existe:
-                novo = models.ContatoGrupo(
+            contato_db = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
+            if not contato_db:
+                contato_db = models.ContatoGrupo(
                     cliente_id=cid,
                     nome=p_nome, numero=p_numero, jid_grupo=grupo.id_do_grupo,
                     nome_grupo=grupo.nome, no_grupo=True,
-                    extraido_em=agora
+                    extraido_em=agora,
+                    webhook_enviado=False
                 )
-                db.add(novo)
-                novos_contatos.append({"nome": p_nome, "numero": p_numero})
+                db.add(contato_db)
+                db.flush()
             else:
-                if p_nome: existe.nome = p_nome
-                existe.no_grupo = True
-                if cid: existe.cliente_id = cid
+                if p_nome: contato_db.nome = p_nome
+                contato_db.no_grupo = True
+                if cid: contato_db.cliente_id = cid
 
-        # Dispara webhook se configurado
-        webhook_url = getattr(grupo, 'webhook_extracao_url', None)
-        contatos_para_webhook = novos_contatos if novos_contatos else todos_contatos
+            # Dispara webhook se configurado e o contato ainda NÃO foi enviado com sucesso
+            if webhook_url and not getattr(contato_db, 'webhook_enviado', False):
+                ok = sync_service.disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
+                if ok:
+                    contato_db.webhook_enviado = True
+                    contato_db.webhook_enviado_em = agora
+                    enviados_webhook_count += 1
 
-        if webhook_url and contatos_para_webhook:
-            grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
-            print(f"W-API Webhook Manual: Enviando {len(contatos_para_webhook)} contato(s) para {webhook_url}")
-            for c in contatos_para_webhook:
-                sync_service.disparar_webhook_contato(webhook_url, c, grupo_info)
+        db.commit()
 
         # Registra log no Histórico
         log = models.LogDisparo(
             cliente_id=cid,
             grupo_nome=grupo.nome,
-            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {len(contatos_para_webhook)} enviados via webhook)",
+            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {enviados_webhook_count} enviados via webhook)",
             status="SUCESSO",
             tipo="extracao_contatos",
             criado_em=agora

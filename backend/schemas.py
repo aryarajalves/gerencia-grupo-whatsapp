@@ -159,6 +159,8 @@ class ContatoGrupo(BaseModel):
     nome_grupo: str
     no_grupo: bool = True
     extraido_em: datetime
+    webhook_enviado: bool = False
+    webhook_enviado_em: Optional[datetime] = None
 
     class Config:
         from_attributes = True

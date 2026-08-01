@@ -146,3 +146,15 @@ def test_disparar_webhook_contato_status_erro_nao_bloqueia():
             disparar_webhook_contato("https://hook.example.com/errado", contato, grupo)
         except Exception:
             pytest.fail("disparar_webhook_contato não deveria lançar exceção quando recebe status 500")
+
+
+def test_contato_grupo_model_webhook_enviado_default(db_session):
+    """Deve ter webhook_enviado como False por padrão no modelo ContatoGrupo."""
+    import models
+    c = models.ContatoGrupo(nome="Teste", numero="123", jid_grupo="g@g.us", nome_grupo="G")
+    db_session.add(c)
+    db_session.commit()
+    db_session.refresh(c)
+    assert c.webhook_enviado is False
+    assert c.webhook_enviado_em is None
+

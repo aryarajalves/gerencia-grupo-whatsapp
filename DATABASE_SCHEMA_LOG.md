@@ -18,6 +18,16 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
 
 ---
 
+### [2026-08-01] Rastreamento de Envio de Webhook por Contato
+- **Tabela Afetada:** `contatos_grupos`
+- **Colunas Adicionadas:**
+  - `webhook_enviado` (BOOLEAN DEFAULT FALSE) — Indica se o contato já foi despachado com sucesso para o webhook do grupo
+  - `webhook_enviado_em` (TIMESTAMP NULL) — Timestamp de quando o webhook foi disparado para este contato
+- **Script de Migração:** `backend/scripts/add_webhook_enviado_column.py`
+- **Descrição:** Garante que contatos que foram extraídos do WhatsApp antes da configuração do webhook (ou cuja tentativa anterior de webhook falhou) sejam identificados e enviados apenas 1 vez quando a extração for executada.
+
+---
+
 ### [2026-08-01] Webhook de Extração de Contatos por Grupo
 - **Tabela Afetada:** `grupos_whatsapp`
 - **Coluna Adicionada:**
