@@ -73,7 +73,10 @@ def agendar_mensagem(mensagem: schemas.MensagemDisparadaCreate, db: Session = De
 @router.put("/mensagens/{mensagem_id}", response_model=schemas.MensagemDisparada, dependencies=[Depends(security.get_api_key)])
 def atualizar_mensagem(mensagem_id: uuid.UUID, mensagem: schemas.MensagemDisparadaCreate, db: Session = Depends(get_db)):
     cid = get_active_client_id(db)
-    db_msg = db.query(models.MensagemDisparada).filter(models.MensagemDisparada.id == mensagem_id, models.MensagemDisparada.cliente_id == cid).first()
+    db_msg = db.query(models.MensagemDisparada).filter(
+        models.MensagemDisparada.id == mensagem_id,
+        or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None))
+    ).first()
     if not db_msg:
         raise HTTPException(status_code=404, detail="Mensagem não encontrada")
     
@@ -98,7 +101,10 @@ def atualizar_mensagem(mensagem_id: uuid.UUID, mensagem: schemas.MensagemDispara
 @router.delete("/mensagens/{mensagem_id}", dependencies=[Depends(security.get_api_key)])
 def deletar_mensagem(mensagem_id: uuid.UUID, db: Session = Depends(get_db)):
     cid = get_active_client_id(db)
-    db_msg = db.query(models.MensagemDisparada).filter(models.MensagemDisparada.id == mensagem_id, models.MensagemDisparada.cliente_id == cid).first()
+    db_msg = db.query(models.MensagemDisparada).filter(
+        models.MensagemDisparada.id == mensagem_id,
+        or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None))
+    ).first()
     if not db_msg:
         raise HTTPException(status_code=404, detail="Mensagem não encontrada")
     
@@ -109,9 +115,13 @@ def deletar_mensagem(mensagem_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.patch("/mensagens/{mensagem_id}/toggle", response_model=schemas.MensagemDisparada, dependencies=[Depends(security.get_api_key)])
 def toggle_mensagem(mensagem_id: uuid.UUID, db: Session = Depends(get_db)):
     cid = get_active_client_id(db)
-    db_msg = db.query(models.MensagemDisparada).filter(models.MensagemDisparada.id == mensagem_id, models.MensagemDisparada.cliente_id == cid).first()
+    db_msg = db.query(models.MensagemDisparada).filter(
+        models.MensagemDisparada.id == mensagem_id,
+        or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None))
+    ).first()
     if not db_msg:
         raise HTTPException(status_code=404, detail="Mensagem não encontrada")
+
     
     db_msg.ativo = not db_msg.ativo
     db.commit()
