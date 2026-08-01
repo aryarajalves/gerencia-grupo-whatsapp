@@ -646,11 +646,12 @@ const GroupsTable = ({
                       <button onClick={() => abrirModalMensagens(g)} disabled={!!editingId} className="btn-icon-secondary" title="Vincular Mensagens"><ListChecks size={14} /></button>
                       <button onClick={() => startEdit(g)} disabled={!!editingId} className="btn-icon-secondary" title="Editar Grupo"><Pencil size={14} /></button>
                       <button onClick={() => handleToggle(g.id)} disabled={!!editingId} className="btn-icon-warning" title={g.ativo ? "Pausar" : "Ativar"}>{g.ativo ? <PauseCircle size={14} /> : <PlayCircle size={14} />}</button>
-                      <button onClick={() => setDeletingId(g.id)} disabled={!!editingId} className="btn-icon-danger" title="Excluir"><Trash2 size={14} /></button>
                     </div>
-                  </tr>
-                );
-              })}
+                  </td>
+                </tr>
+              );
+            })}
+
             </tbody>
 
           </table>
