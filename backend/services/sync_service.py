@@ -281,3 +281,99 @@ def atualizar_contagem_contatos(db):
 
     except Exception as e:
         print(f"W-API Sync: Erro geral: {str(e)}")
+
+def extrair_e_salvar_contatos(db, grupo):
+    """Extrai e salva contatos para um grupo específico (chamado pelo consumidor da fila)."""
+    try:
+        instance_id = get_wapi_instance(db)
+        headers = get_wapi_headers(db)
+        if not instance_id or not headers.get("Authorization"):
+            return False
+
+        if getattr(grupo, 'extrair_contatos', True) is False:
+            return False
+
+        agora = datetime.now(BR_TZ).replace(tzinfo=None)
+
+        with httpx.Client(timeout=30.0) as client:
+            participants = fetch_participants(client, WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
+            if participants is None:
+                return False
+
+            grupo.quantidade_contatos = len(participants)
+            grupo.ultima_extracao_em = agora
+
+            if not grupo.link_convite:
+                try:
+                    params_inv = {"instanceId": instance_id, "groupId": grupo.id_do_grupo}
+                    resp_invite = client.get(f"{WAPI_BASE}/group/invite-code", params=params_inv, headers=headers)
+                    if resp_invite.status_code != 200:
+                        resp_invite = client.get(f"{WAPI_BASE}/group/get-invite-code", params=params_inv, headers=headers)
+                    if resp_invite.status_code == 200:
+                        data_invite = resp_invite.json()
+                        invite_url = data_invite.get("inviteUrl") or data_invite.get("inviteCode") or data_invite.get("code")
+                        if invite_url:
+                            if not invite_url.startswith("http"):
+                                invite_url = f"https://chat.whatsapp.com/{invite_url}"
+                            grupo.link_convite = invite_url
+                except Exception:
+                    pass
+
+            db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
+            db.commit()
+
+            webhook_url = getattr(grupo, 'webhook_extracao_url', None)
+            grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
+
+            novos_count = 0
+            for p in participants:
+                try:
+                    p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
+                    if not p_numero: continue
+                    if "@" in p_numero: p_numero = p_numero.split("@")[0]
+
+                    p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
+
+                    contato_db = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
+                    if not contato_db:
+                        contato_db = models.ContatoGrupo(
+                            cliente_id=grupo.cliente_id,
+                            nome=p_nome, numero=p_numero, jid_grupo=grupo.id_do_grupo,
+                            nome_grupo=grupo.nome, no_grupo=True,
+                            extraido_em=datetime.now(BR_TZ).replace(tzinfo=None),
+                            webhook_enviado=False
+                        )
+                        db.add(contato_db)
+                        db.flush()
+                        novos_count += 1
+                    else:
+                        if p_nome: contato_db.nome = p_nome
+                        contato_db.no_grupo = True
+                        if grupo.cliente_id: contato_db.cliente_id = grupo.cliente_id
+
+                    if webhook_url and not getattr(contato_db, 'webhook_enviado', False):
+                        ok = disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
+                        if ok:
+                            contato_db.webhook_enviado = True
+                            contato_db.webhook_enviado_em = datetime.now(BR_TZ).replace(tzinfo=None)
+                except Exception as ep:
+                    print(f"Erro participante {p.get('id')}: {ep}")
+
+            db.commit()
+
+            log_sucesso = models.LogDisparo(
+                cliente_id=grupo.cliente_id,
+                grupo_nome=grupo.nome,
+                mensagem_corpo=f"Extração de contatos realizada ({len(participants)} contatos encontrados, {novos_count} novos)",
+                status="SUCESSO",
+                tipo="extracao_contatos",
+                criado_em=agora
+            )
+            db.add(log_sucesso)
+            db.commit()
+            return True
+    except Exception as e:
+        print(f"W-API Sync: Erro ao extrair {grupo.nome}: {e}")
+        db.rollback()
+        return False
+
