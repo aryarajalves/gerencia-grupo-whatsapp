@@ -110,58 +110,63 @@ const GroupsTable = ({
           />
         </div>
 
-        {/* Chips de Status */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setStatusFilter('todos')}
+        {/* Dropdown de Status para Economizar Espaço */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+          <Filter size={14} style={{ color: 'var(--primary)' }} />
+          <span>Status:</span>
+          <select
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
             style={{
-              padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600,
-              background: statusFilter === 'todos' ? 'rgba(37,99,235,0.2)' : 'rgba(255,255,255,0.03)',
-              color: statusFilter === 'todos' ? 'var(--primary)' : 'var(--text-dim)',
-              border: `1px solid ${statusFilter === 'todos' ? 'rgba(37,99,235,0.4)' : 'var(--border)'}`,
-              cursor: 'pointer', transition: 'all 0.2s'
+              padding: '6px 12px',
+              background: statusFilter === 'alerta' 
+                ? 'rgba(239, 68, 68, 0.15)' 
+                : statusFilter === 'ativos'
+                ? 'rgba(34, 197, 94, 0.15)'
+                : statusFilter === 'inativos'
+                ? 'rgba(245, 158, 11, 0.15)'
+                : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${
+                statusFilter === 'alerta' 
+                  ? 'rgba(239, 68, 68, 0.4)' 
+                  : statusFilter === 'ativos'
+                  ? 'rgba(34, 197, 94, 0.4)'
+                  : statusFilter === 'inativos'
+                  ? 'rgba(245, 158, 11, 0.4)'
+                  : 'rgba(255, 255, 255, 0.12)'
+              }`,
+              borderRadius: '8px',
+              color: statusFilter === 'alerta' 
+                ? '#f87171' 
+                : statusFilter === 'ativos'
+                ? '#4ade80'
+                : statusFilter === 'inativos'
+                ? '#fbbf24'
+                : '#fff',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s'
             }}
           >
-            Todos ({grupos.length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('ativos')}
-            style={{
-              padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600,
-              background: statusFilter === 'ativos' ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.03)',
-              color: statusFilter === 'ativos' ? 'var(--success)' : 'var(--text-dim)',
-              border: `1px solid ${statusFilter === 'ativos' ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
-              cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >
-            Ativos ({countAtivos})
-          </button>
-          <button
-            onClick={() => setStatusFilter('inativos')}
-            style={{
-              padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600,
-              background: statusFilter === 'inativos' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)',
-              color: statusFilter === 'inativos' ? '#f59e0b' : 'var(--text-dim)',
-              border: `1px solid ${statusFilter === 'inativos' ? 'rgba(245,158,11,0.3)' : 'var(--border)'}`,
-              cursor: 'pointer', transition: 'all 0.2s'
-            }}
-          >
-            Pausados ({countInativos})
-          </button>
-          {countAlerta > 0 && (
-            <button
-              onClick={() => { setStatusFilter('alerta'); setCurrentPage(1); }}
-              style={{
-                padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600,
-                background: statusFilter === 'alerta' ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.08)',
-                color: '#f87171',
-                border: `1px solid ${statusFilter === 'alerta' ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.2)'}`,
-                cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              Sem Mensagem Ativada ({countAlerta})
-            </button>
-          )}
+            <option value="todos" style={{ background: '#161822', color: '#fff' }}>
+              Todos os Grupos ({grupos.length})
+            </option>
+            <option value="ativos" style={{ background: '#161822', color: '#4ade80' }}>
+              Ativos ({countAtivos})
+            </option>
+            <option value="inativos" style={{ background: '#161822', color: '#fbbf24' }}>
+              Pausados ({countInativos})
+            </option>
+            {countAlerta > 0 && (
+              <option value="alerta" style={{ background: '#161822', color: '#f87171' }}>
+                Sem Mensagem Ativada ({countAlerta})
+              </option>
+            )}
+          </select>
+        </div>
+
 
           {/* Seletor Exibir por Página */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-dim)', marginLeft: '8px' }}>
@@ -214,9 +219,9 @@ const GroupsTable = ({
             <ChevronDown size={14} style={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
           </button>
         </div>
-      </div>
 
       {/* Painel Expandível de Filtros Avançados */}
+
       {showAdvancedFilters && (
         <div style={{
           padding: '1.25rem 1.5rem',

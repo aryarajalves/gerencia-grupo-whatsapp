@@ -26,6 +26,14 @@ def main():
     sched = scheduler.iniciar_agendador()
     logger.info("Agendador de disparos e rotinas Periódicas rodando no Worker.")
 
+    # 3. Inicia o consumidor da fila do RabbitMQ em uma thread separada
+    import threading
+    from services.queue_consumer import start_consumer_loop
+    consumer_thread = threading.Thread(target=start_consumer_loop, daemon=True)
+    consumer_thread.start()
+    logger.info("Consumidor RabbitMQ iniciado em segundo plano (Processamento 1 por vez).")
+
+
     def handle_exit(sig, frame):
         logger.info("Recebido sinal de desligamento. Encerrando o Worker...")
         try:

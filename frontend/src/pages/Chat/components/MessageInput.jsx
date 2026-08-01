@@ -122,7 +122,7 @@ const MessageInput = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSendMessage(e);
+                    e.target.closest('form')?.requestSubmit();
                   }
                 }}
                 style={{ 

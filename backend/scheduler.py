@@ -128,26 +128,18 @@ def verificar_e_disparar_mensagens():
                         print(f"!!! PLANO LITE -> Ignorando enquete para {grupo.nome}")
                         continue
 
-                # Lógica de mídias auxiliares para Áudio/Enquete
-                if (msg.tipo_de_mensagem == "audio" or msg.tipo_de_mensagem == "enquete") and msg.link_midia:
-                    ext = msg.link_midia.split('.')[-1].split('?')[0].lower()
-                    tipo_m = "imagem" if ext in ['jpg', 'jpeg', 'png', 'webp'] else "video" if ext in ['mp4', 'mov'] else "audio" if ext in ['mp3', 'ogg', 'wav', 'm4a'] else "arquivo"
-                    
-                    msg_midia = models.MensagemDisparada(
-                        mensagem=msg.mensagem if msg.tipo_de_mensagem == "enquete" else "",
-                        link_midia=msg.link_midia,
-                        tipo_de_mensagem=tipo_m if msg.tipo_de_mensagem == "enquete" else "audio"
-                    )
-                    enviar_wapi(grupo, msg_midia, db)
-                    time.sleep(5)
+                # Enfileiramento via RabbitMQ (Processamento Sequencial 1 por vez)
+                from services.queue_service import publish_dispatch_task, is_queue_available
+                if is_queue_available():
+                    published = publish_dispatch_task(grupo.id, msg.id)
+                    if published:
+                        print(f"Disparo enfileirado no RabbitMQ (1 por vez) -> {grupo.nome} ({msg.id})")
+                        continue
 
-                if msg.tipo_de_mensagem == "audio" and msg.mensagem:
-                    msg_texto = models.MensagemDisparada(mensagem=msg.mensagem, tipo_de_mensagem="texto")
-                    enviar_wapi(grupo, msg_texto, db)
-                    time.sleep(5)
-
+                # Fallback síncrono se a fila não estiver rodando
                 enviar_wapi(grupo, msg, db)
-                time.sleep(5) 
+                time.sleep(2)
+ 
 
     except Exception as e:
         print(f"Erro no agendador: {str(e)}")

@@ -50,8 +50,12 @@ services:
       # --- Fuso Horário de Brasília ---
       - TZ=America/Sao_Paulo
 
+      # --- RabbitMQ (Fila AMQP Sequencial) ---
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672/
+
       # --- Desativar Agendador na API (Executado no container worker) ---
       - DISABLE_SCHEDULER=true
+
 
     networks:
       - network_swarm_public
