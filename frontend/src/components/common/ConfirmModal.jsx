@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertCircle, Info, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import ModalPortal from './ModalPortal';
 
-const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'danger', hideCancel = false }) => {
+const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'danger', hideCancel = false, confirmText = null }) => {
   if (!show) return null;
 
   const getConfig = () => {
@@ -97,7 +97,7 @@ const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'dange
               }} 
               onClick={onConfirm}
             >
-              {type === 'danger' ? 'Excluir Agora' : 'Entendido'}
+              {confirmText || (type === 'danger' ? 'Excluir Agora' : 'Confirmar')}
             </button>
           </div>
         </div>

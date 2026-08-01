@@ -12,7 +12,8 @@ const GroupsTable = ({
   handleToggle, 
   setDeletingId,
   onOpenNewGroupForm,
-  extrairContatosAgora
+  extrairContatosAgora,
+  openConfirm
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos'); // 'todos' | 'ativos' | 'inativos' | 'alerta'
@@ -239,7 +240,26 @@ const GroupsTable = ({
                   <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end' }}>
                       {extrairContatosAgora && (
-                        <button onClick={() => extrairContatosAgora(g.id)} disabled={!!editingId} className="btn-icon-accent" title="Extrair Contatos Agora"><Users size={14} /></button>
+                        <button 
+                          onClick={() => {
+                            if (typeof openConfirm === 'function') {
+                              openConfirm({
+                                title: 'Extrair Contatos Manualmente',
+                                message: `Deseja iniciar a busca e sincronização manual de contatos para o grupo "${g.nome}"? Os contatos encontrados serão salvos e despachados via webhook.`,
+                                type: 'info',
+                                confirmText: 'Extrair Agora',
+                                onConfirm: () => extrairContatosAgora(g.id)
+                              });
+                            } else {
+                              extrairContatosAgora(g.id);
+                            }
+                          }} 
+                          disabled={!!editingId} 
+                          className="btn-icon-accent" 
+                          title="Extrair Contatos Agora"
+                        >
+                          <Users size={14} />
+                        </button>
                       )}
                       <button onClick={() => abrirModalMensagens(g)} disabled={!!editingId} className="btn-icon-secondary" title="Vincular Mensagens"><ListChecks size={14} /></button>
                       <button onClick={() => startEdit(g)} disabled={!!editingId} className="btn-icon-secondary" title="Editar Grupo"><Pencil size={14} /></button>

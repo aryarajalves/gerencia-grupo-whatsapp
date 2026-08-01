@@ -173,6 +173,7 @@ const GerenciarGrupos = ({ grupos, setGrupos, mensagens, onRefresh, openConfirm 
           setDeletingId={setDeletingId}
           onOpenNewGroupForm={() => setActiveSubTab('form')}
           extrairContatosAgora={extrairContatosAgora}
+          openConfirm={openConfirm}
         />
       )}
 

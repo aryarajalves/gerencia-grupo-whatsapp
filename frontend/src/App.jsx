@@ -91,15 +91,16 @@ function App() {
 
   // Confirmation Handler
   const openConfirm = (arg1, arg2, arg3, arg4) => {
-    // Suporte para novo formato: openConfirm({ title, message, type, onConfirm })
+    // Suporte para novo formato: openConfirm({ title, message, type, onConfirm, confirmText })
     if (typeof arg1 === 'object' && arg1 !== null) {
-      const { title, message, type = 'info', onConfirm = null } = arg1;
+      const { title, message, type = 'info', onConfirm = null, confirmText = null } = arg1;
       setConfirmDialog({ 
         show: true, 
         title, 
         message, 
         onConfirm: onConfirm ? () => { onConfirm(); closeConfirm(); } : closeConfirm, 
         type,
+        confirmText,
         hideCancel: !onConfirm // Se não tem callback de confirmação, é só um alerta
       });
     } else {
@@ -110,14 +111,16 @@ function App() {
         message: arg2, 
         onConfirm: arg3 ? () => { arg3(); closeConfirm(); } : closeConfirm, 
         type: arg4 || 'danger',
+        confirmText: null,
         hideCancel: false
       });
     }
   };
 
   const closeConfirm = () => {
-    setConfirmDialog({ show: false, title: '', message: '', onConfirm: null, type: 'danger', hideCancel: false });
+    setConfirmDialog({ show: false, title: '', message: '', onConfirm: null, type: 'danger', confirmText: null, hideCancel: false });
   };
+
 
   // Path detection for public pages
   const path = window.location.pathname;
