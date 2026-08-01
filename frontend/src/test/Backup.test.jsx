@@ -37,13 +37,15 @@ vi.mock('../services/api', () => ({
 describe('Backup Component', () => {
   const mockOpenConfirm = vi.fn();
 
-  it('renderiza o cabeçalho, os 3 cards de resumo e botões de ação', async () => {
+  it('renderiza o cabeçalho, os 3 cards de resumo, botões de ação e paginação de backups', async () => {
     render(<Backup openConfirm={mockOpenConfirm} />);
 
     expect(screen.getByRole('heading', { name: /Backup Banco/i })).toBeInTheDocument();
     expect(await screen.findByText(/zapgroup_backup_2026_08_01.dump.gz/i)).toBeInTheDocument();
-    expect(screen.getByText(/30/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Fazer Backup Agora/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Fazer Upload de Backup/i })).toBeInTheDocument();
+    expect(screen.getByText(/Exibir por página:/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Anterior/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Próximo/i })).toBeInTheDocument();
   });
 });
