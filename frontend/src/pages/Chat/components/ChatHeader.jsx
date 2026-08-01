@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, Eye } from 'lucide-react';
+import { Users, RefreshCw, Eye, X } from 'lucide-react';
 import axiosInstance from '../../../services/api';
 
-const ChatHeader = ({ selectedGroup, fetchMessages, loading, onOpenContacts }) => {
+const ChatHeader = ({ selectedGroup, fetchMessages, loading, onOpenContacts, onCloseChat }) => {
+
   const [contactCount, setContactCount] = useState(selectedGroup?.quantidade_contatos || 0);
 
   useEffect(() => {
@@ -109,24 +110,46 @@ const ChatHeader = ({ selectedGroup, fetchMessages, loading, onOpenContacts }) =
         </div>
       </div>
 
-      <button 
-        className="btn-icon" 
-        onClick={() => fetchMessages(selectedGroup.id_do_grupo)}
-        title="Atualizar mensagens"
-        style={{
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          color: '#fff',
-          padding: '10px',
-          borderRadius: '10px',
-          cursor: 'pointer',
-          transition: 'all 0.2s'
-        }}
-      >
-        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button 
+          className="btn-icon" 
+          onClick={() => fetchMessages(selectedGroup.id_do_grupo)}
+          title="Atualizar mensagens"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#fff',
+            padding: '10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+        </button>
+
+        {onCloseChat && (
+          <button 
+            className="btn-icon" 
+            onClick={onCloseChat}
+            title="Fechar conversa aberta"
+            style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#f87171',
+              padding: '10px',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
     </div>
   );
 };
 
 export default ChatHeader;
+

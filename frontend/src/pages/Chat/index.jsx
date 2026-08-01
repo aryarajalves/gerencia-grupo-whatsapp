@@ -77,7 +77,9 @@ const Chat = ({ openConfirm }) => {
               fetchMessages={fetchMessages}
               loading={loading}
               onOpenContacts={() => setShowContactsModal(true)}
+              onCloseChat={() => setSelectedGroup(null)}
             />
+
 
             <MessageList 
               loading={loading}
