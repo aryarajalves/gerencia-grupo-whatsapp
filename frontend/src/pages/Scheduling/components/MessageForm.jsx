@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, PlusCircle, Pencil, MessageSquare, Clock, CalendarDays, Layers, Trash2, Image, Video, Mic, FileText, LayoutGrid, Upload, X, CheckCircle2 } from 'lucide-react';
+import { Send, PlusCircle, Pencil, MessageSquare, Clock, CalendarDays, Layers, Trash2, Image, Video, Mic, FileText, LayoutGrid, Upload, X, CheckCircle2, Lock } from 'lucide-react';
 import { TIPO_CONFIG } from '../../../utils/constants';
 
 const MessageForm = ({ 
@@ -48,7 +48,14 @@ const MessageForm = ({
                 const Icon = cfg.icon;
                 const isSelected = novaMensagem.tipo_de_mensagem === key;
                 return (
-                  <button key={key} type="button" onClick={() => setNovaMensagem({ ...novaMensagem, tipo_de_mensagem: key })} style={{
+                  <button key={key} type="button" onClick={() => {
+                    const nextMsg = { ...novaMensagem, tipo_de_mensagem: key };
+                    if (key === 'status_grupo' && (!nextMsg.mensagem || (nextMsg.mensagem !== 'fechar' && nextMsg.mensagem !== 'abrir'))) {
+                      nextMsg.mensagem = 'fechar';
+                    }
+                    setNovaMensagem(nextMsg);
+                  }} style={{
+
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '10px 5px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s',
                     border: '1px solid', borderColor: isSelected ? cfg.color : 'var(--border)',
                     background: isSelected ? cfg.bg : 'rgba(255,255,255,0.02)',
