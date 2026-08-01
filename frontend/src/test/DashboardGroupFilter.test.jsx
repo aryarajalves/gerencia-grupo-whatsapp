@@ -73,4 +73,17 @@ describe('Dashboard - Seletor de Grupo e Consolidação de Avisos', () => {
     expect(screen.getByText('Mensagem Alfa')).toBeInTheDocument();
     expect(screen.queryByText('Mensagem Beta')).not.toBeInTheDocument();
   });
+
+  it('renderiza os dias do Ciclo Atual em linhas compactas e permite expandir os grupos do dia', () => {
+    renderDashboard();
+    expect(screen.getByText('DIA 1')).toBeInTheDocument();
+    expect(screen.getByText('DIA 2')).toBeInTheDocument();
+
+    // Clica no botão para expandir os grupos do DIA 1
+    const verGruposBtns = screen.getAllByText('Ver Grupos');
+    fireEvent.click(verGruposBtns[0]);
+
+    expect(screen.getByText('Grupo Alfa 001')).toBeInTheDocument();
+  });
 });
+

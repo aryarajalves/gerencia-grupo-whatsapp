@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Users, Send, TrendingUp, MessageSquare,
-  Clock, CheckCircle2, Layers, History, Image, Video,
+  Clock, CheckCircle2, History, Image, Video,
   Mic, FileText, LayoutGrid, Check, Copy, Edit3
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import axiosInstance from '../services/api';
 import { useWaStatus } from '../contexts/WaStatusContext';
 import DashboardHeader from '../components/Dashboard/DashboardHeader';
 import DashboardWarnings from '../components/Dashboard/DashboardWarnings';
+import DashboardCicloAtual from '../components/Dashboard/DashboardCicloAtual';
 
 const TIPO_CONFIG = {
   texto:      { label: 'Texto',       icon: MessageSquare, color: '#60a5fa' },
@@ -39,7 +40,6 @@ const Dashboard = ({ stats = {}, grupos = [], onRefresh }) => {
 
   const [dispensando, setDispensando] = useState(null);
   const [selectedGroupJid, setSelectedGroupJid] = useState('TODOS');
-  const [expanderCicloMap, setExpanderCicloMap] = useState({});
   const { copiedId, handleCopy } = useCopy();
 
   const handleDispensar = async (id) => {
@@ -78,10 +78,6 @@ const Dashboard = ({ stats = {}, grupos = [], onRefresh }) => {
   const ultimoDisparoFiltrado = selectedGroupJid === 'TODOS'
     ? ultimo_disparo
     : (ultimo_disparo && ultimo_disparo.grupo_nome === selectedGroupName ? ultimo_disparo : null);
-
-  const toggleExpandirCiclo = (dia) => {
-    setExpanderCicloMap(prev => ({ ...prev, [dia]: !prev[dia] }));
-  };
 
   const statCards = [
     {
@@ -255,63 +251,13 @@ const Dashboard = ({ stats = {}, grupos = [], onRefresh }) => {
 
         {/* Sidebar: Ciclo & Última Atividade */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Ciclo Atual */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1 }}>
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.015)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Layers size={14} style={{ color: 'var(--accent)' }} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Ciclo Atual</h3>
-            </div>
-            <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {cicloFiltrado.length > 0 ? cicloFiltrado.map((item, i) => {
-                const totalGruposDia = item.grupos.length;
-                const estaExpandido = expanderCicloMap[item.dia];
-                const gruposExibidos = (totalGruposDia > 8 && !estaExpandido) ? item.grupos.slice(0, 8) : item.grupos;
-                const ocultos = totalGruposDia - 8;
-
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-                    <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
-                      DIA {item.dia}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{totalGruposDia} grupo(s)</span>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {gruposExibidos.map((nome, j) => (
-                          <span key={j} style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(37,99,235,0.1)', color: 'var(--primary)', borderRadius: '6px', border: '1px solid rgba(37,99,235,0.15)' }}>
-                            {nome}
-                          </span>
-                        ))}
-                        {totalGruposDia > 8 && (
-                          <button
-                            onClick={() => toggleExpandirCiclo(item.dia)}
-                            style={{
-                              fontSize: '0.7rem',
-                              padding: '2px 8px',
-                              background: 'rgba(245,158,11,0.12)',
-                              color: '#f59e0b',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(245,158,11,0.25)',
-                              cursor: 'pointer',
-                              fontWeight: 700
-                            }}
-                          >
-                            {estaExpandido ? 'Ver Menos' : `+${ocultos} outros`}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }) : (
-                <div style={{ textAlign: 'center', padding: '1.5rem 0', color: 'var(--text-dim)', fontSize: '0.85rem' }}>Nenhum grupo em ciclo ativo.</div>
-              )}
-            </div>
-          </div>
+          {/* Ciclo Atual Retrátil por Dia */}
+          <DashboardCicloAtual
+            grupos_por_dia={cicloFiltrado}
+            selectedGroupJid={selectedGroupJid}
+            setSelectedGroupJid={setSelectedGroupJid}
+            grupos={grupos}
+          />
 
           {/* Última Atividade */}
           <div className="card" style={{ padding: 0, overflow: 'hidden', background: 'linear-gradient(135deg, rgba(37,99,235,0.04), rgba(124,58,237,0.06))', border: '1px solid rgba(37,99,235,0.18)' }}>
