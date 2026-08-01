@@ -1,3 +1,4 @@
+import os
 import time
 import json
 import pika
@@ -8,7 +9,9 @@ from services.message_service import enviar_wapi
 from services.sync_service import extrair_e_salvar_contatos
 from services.queue_service import RABBITMQ_URL, QUEUE_DISPAROS, QUEUE_EXTRACAO
 
-DELAY_ENTRE_TAREFAS_SEGUNDOS = 2
+# Delay configurável entre cada tarefa processada (padrão: 2 segundos)
+DELAY_ENTRE_TAREFAS_SEGUNDOS = int(os.getenv("RABBITMQ_DELAY_SECONDS", "2"))
+
 
 def _process_message(ch, method, properties, body):
     db = SessionLocal()
