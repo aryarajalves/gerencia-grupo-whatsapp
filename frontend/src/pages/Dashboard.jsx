@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Users, Send, TrendingUp, MessageSquare,
   Clock, CheckCircle2, History, Image, Video,
-  Mic, FileText, LayoutGrid, Check, Copy, Edit3
+  Mic, FileText, LayoutGrid, Check, Copy, Edit3, Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCopy } from '../hooks/useCopy';
@@ -13,14 +13,16 @@ import DashboardWarnings from '../components/Dashboard/DashboardWarnings';
 import DashboardCicloAtual from '../components/Dashboard/DashboardCicloAtual';
 
 const TIPO_CONFIG = {
-  texto:      { label: 'Texto',       icon: MessageSquare, color: '#60a5fa' },
-  nome_grupo: { label: 'Nome Grupo', icon: Edit3,       color: '#f97316' },
-  imagem:     { label: 'Imagem',      icon: Image,         color: '#a78bfa' },
-  video:      { label: 'Vídeo',       icon: Video,         color: '#f472b6' },
-  audio:      { label: 'Áudio',       icon: Mic,           color: '#34d399' },
-  arquivo:    { label: 'PDF/Arquivo', icon: FileText,      color: '#fbbf24' },
-  enquete:    { label: 'Enquete',     icon: LayoutGrid,    color: '#22d3ee' }
+  texto:        { label: 'Texto',        icon: MessageSquare, color: '#60a5fa' },
+  nome_grupo:   { label: 'Nome Grupo',  icon: Edit3,        color: '#f97316' },
+  status_grupo: { label: 'Abrir/Fechar', icon: Lock,         color: '#ec4899' },
+  imagem:       { label: 'Imagem',       icon: Image,         color: '#a78bfa' },
+  video:        { label: 'Vídeo',        icon: Video,         color: '#f472b6' },
+  audio:        { label: 'Áudio',        icon: Mic,           color: '#34d399' },
+  arquivo:      { label: 'PDF/Arquivo',  icon: FileText,      color: '#fbbf24' },
+  enquete:      { label: 'Enquete',      icon: LayoutGrid,    color: '#22d3ee' }
 };
+
 
 const Dashboard = ({ stats = {}, grupos = [], onRefresh }) => {
   const { waStatus } = useWaStatus();

@@ -72,10 +72,24 @@ def montar_payload(grupo, msg):
             "groupName": msg.mensagem
         }
         return payload_custom, tipo
+    elif tipo in ["status_grupo", "abrir_fechar_grupo"]:
+        val = (msg.mensagem or "").lower().strip()
+        if "fechar" in val or "close" in val or "fechado" in val or "announcement" in val:
+            action = "announcement"
+        else:
+            action = "not_announcement"
+        payload_custom = {
+            "groupId": grupo.id_do_grupo,
+            "action": action,
+            "setting": action,
+            "groupSetting": action
+        }
+        return payload_custom, "status_grupo"
     else:
         base["message"] = msg.mensagem
 
     return base, tipo
+
 
 def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number="Sistema"):
     """Envia a mensagem diretamente para o grupo via W-API."""
@@ -135,7 +149,12 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
                 media_type = None
                 if tipo_m == "nome_grupo":
                     conteudo = f"[Nome do Grupo Alterado para: {conteudo}]"
+                elif tipo_m in ["status_grupo", "abrir_fechar_grupo"]:
+                    val = (conteudo or "").lower().strip()
+                    acao_str = "Fechado (Apenas Admins)" if ("fechar" in val or "close" in val or "fechado" in val or "announcement" in val) else "Aberto (Todos enviam)"
+                    conteudo = f"[Status do Grupo: {acao_str}]"
                 elif tipo_m == "enquete":
+
                     media_type = "enquete"
                     opcoes_raw = getattr(msg, 'opcoes_enquete', None) or (payload.get("poll") if isinstance(payload, dict) else None)
                     if isinstance(opcoes_raw, list):

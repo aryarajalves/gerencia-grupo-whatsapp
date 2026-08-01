@@ -134,7 +134,13 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
                         fontStyle: m.tipo_de_mensagem === 'nome_grupo' ? 'italic' : 'normal',
                         fontWeight: m.tipo_de_mensagem === 'nome_grupo' ? 600 : 400
                       }}>
-                        {m.tipo_de_mensagem === 'nome_grupo' ? `Alterar nome para: "${m.mensagem}"` : (m.mensagem || '(Mídia sem legenda)')}
+                        {m.tipo_de_mensagem === 'nome_grupo' 
+                          ? `Alterar nome para: "${m.mensagem}"` 
+                          : m.tipo_de_mensagem === 'status_grupo'
+                          ? (m.mensagem === 'abrir' ? '🔓 Abrir Grupo (Todos os participantes enviam)' : '🔒 Fechar Grupo (Apenas administradores enviam)')
+                          : (m.mensagem || '(Mídia sem legenda)')
+                        }
+
                       </div>
 
                       {m.tipo_de_mensagem === 'enquete' && m.opcoes_enquete && (

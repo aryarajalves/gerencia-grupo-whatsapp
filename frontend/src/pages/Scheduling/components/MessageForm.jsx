@@ -133,29 +133,74 @@ const MessageForm = ({
           <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '6px', fontStyle: 'italic' }}>* A mensagem só será disparada para os grupos selecionados acima. Se nenhum for selecionado, ela não será enviada.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: (novaMensagem.tipo_de_mensagem !== 'texto' && novaMensagem.tipo_de_mensagem !== 'nome_grupo') ? '1fr 320px' : '1fr', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: (novaMensagem.tipo_de_mensagem !== 'texto' && novaMensagem.tipo_de_mensagem !== 'nome_grupo' && novaMensagem.tipo_de_mensagem !== 'status_grupo') ? '1fr 320px' : '1fr', gap: '1.5rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="label-premium">
-              <MessageSquare size={12} /> {
-                novaMensagem.tipo_de_mensagem === 'nome_grupo' ? 'Novo Nome do Grupo' : 
-                novaMensagem.tipo_de_mensagem === 'enquete' ? 'Título / Pergunta da Enquete' : 
-                'Texto da Mensagem / Legenda'
-              }
-            </label>
-            <textarea 
-              value={novaMensagem.mensagem} 
-              onChange={e => setNovaMensagem({ ...novaMensagem, mensagem: e.target.value })} 
-              placeholder={
-                novaMensagem.tipo_de_mensagem === 'nome_grupo' ? "Digite o novo nome para o grupo..." : 
-                novaMensagem.tipo_de_mensagem === 'enquete' ? "Ex: Qual sua cor favorita?" :
-                "Digite o conteúdo da mensagem..."
-              } 
-              style={{ width: '100%', minHeight: (novaMensagem.tipo_de_mensagem === 'nome_grupo' || novaMensagem.tipo_de_mensagem === 'enquete') ? '80px' : '160px', resize: 'vertical', fontSize: '1rem', lineHeight: '1.5', padding: '1rem' }} 
-              required={novaMensagem.tipo_de_mensagem === 'nome_grupo' || novaMensagem.tipo_de_mensagem === 'enquete'}
-            />
+            {novaMensagem.tipo_de_mensagem === 'status_grupo' ? (
+              <div>
+                <label className="label-premium"><Lock size={12} /> Ação de Permissão do Grupo</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setNovaMensagem({ ...novaMensagem, mensagem: 'fechar' })}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      padding: '1.25rem', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s',
+                      border: '2px solid',
+                      borderColor: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? '#ec4899' : 'var(--border)',
+                      background: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? 'rgba(236,72,153,0.12)' : 'rgba(255,255,255,0.02)',
+                      color: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? '#ec4899' : 'var(--text-dim)',
+                      boxShadow: (novaMensagem.mensagem === 'fechar' || !novaMensagem.mensagem) ? '0 0 16px rgba(236,72,153,0.2)' : 'none'
+                    }}
+                  >
+                    <div style={{ fontSize: '1.5rem' }}>🔒</div>
+                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>Fechar Grupo</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'center' }}>Apenas administradores podem enviar mensagens</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNovaMensagem({ ...novaMensagem, mensagem: 'abrir' })}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      padding: '1.25rem', borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s',
+                      border: '2px solid',
+                      borderColor: novaMensagem.mensagem === 'abrir' ? '#10b981' : 'var(--border)',
+                      background: novaMensagem.mensagem === 'abrir' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.02)',
+                      color: novaMensagem.mensagem === 'abrir' ? '#10b981' : 'var(--text-dim)',
+                      boxShadow: novaMensagem.mensagem === 'abrir' ? '0 0 16px rgba(16,185,129,0.2)' : 'none'
+                    }}
+                  >
+                    <div style={{ fontSize: '1.5rem' }}>🔓</div>
+                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>Abrir Grupo</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'center' }}>Todos os participantes podem enviar mensagens</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <label className="label-premium">
+                  <MessageSquare size={12} /> {
+                    novaMensagem.tipo_de_mensagem === 'nome_grupo' ? 'Novo Nome do Grupo' : 
+                    novaMensagem.tipo_de_mensagem === 'enquete' ? 'Título / Pergunta da Enquete' : 
+                    'Texto da Mensagem / Legenda'
+                  }
+                </label>
+                <textarea 
+                  value={novaMensagem.mensagem} 
+                  onChange={e => setNovaMensagem({ ...novaMensagem, mensagem: e.target.value })} 
+                  placeholder={
+                    novaMensagem.tipo_de_mensagem === 'nome_grupo' ? "Digite o novo nome para o grupo..." : 
+                    novaMensagem.tipo_de_mensagem === 'enquete' ? "Ex: Qual sua cor favorita?" :
+                    "Digite o conteúdo da mensagem..."
+                  } 
+                  style={{ width: '100%', minHeight: (novaMensagem.tipo_de_mensagem === 'nome_grupo' || novaMensagem.tipo_de_mensagem === 'enquete') ? '80px' : '160px', resize: 'vertical', fontSize: '1rem', lineHeight: '1.5', padding: '1rem' }} 
+                  required={novaMensagem.tipo_de_mensagem === 'nome_grupo' || novaMensagem.tipo_de_mensagem === 'enquete'}
+                />
+              </>
+            )}
           </div>
 
-          {(novaMensagem.tipo_de_mensagem !== 'texto' && novaMensagem.tipo_de_mensagem !== 'nome_grupo') && (
+          {(novaMensagem.tipo_de_mensagem !== 'texto' && novaMensagem.tipo_de_mensagem !== 'nome_grupo' && novaMensagem.tipo_de_mensagem !== 'status_grupo') && (
             <div className="form-group" style={{ marginBottom: 0 }}>
               {novaMensagem.tipo_de_mensagem === 'enquete' ? (
                 <>
@@ -211,6 +256,7 @@ const MessageForm = ({
             </div>
           )}
         </div>
+
 
         <div style={{ display: 'flex', gap: '12px', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
           <button className="btn btn-primary" type="submit" disabled={processing} style={{ height: '50px', flex: 1, justifyContent: 'center', fontSize: '1rem', fontWeight: 800 }}>

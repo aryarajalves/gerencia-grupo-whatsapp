@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  MessageSquare, Edit3, Image, Video, Mic, FileText, LayoutGrid, 
+  MessageSquare, Edit3, Image, Video, Mic, FileText, LayoutGrid, Lock,
   Search, Filter, CalendarDays, Trash2, RefreshCcw, ChevronDown, Clock, 
   CheckCircle2, XCircle, AlertCircle, Info, Send, History as HistoryIcon, Users 
 } from 'lucide-react';
@@ -11,6 +11,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
   const TIPO_CONFIG = {
     texto:             { label: 'Texto',            icon: MessageSquare, color: '#60a5fa' },
     nome_grupo:        { label: 'Nome Grupo',      icon: Edit3,          color: '#f97316' },
+    status_grupo:      { label: 'Abrir/Fechar',    icon: Lock,           color: '#ec4899' },
     imagem:            { label: 'Imagem',           icon: Image,          color: '#a78bfa' },
     video:             { label: 'Vídeo',            icon: Video,          color: '#f472b6' },
     audio:             { label: 'Áudio',            icon: Mic,            color: '#34d399' },
@@ -18,6 +19,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
     enquete:           { label: 'Enquete',          icon: LayoutGrid,     color: '#22d3ee' },
     extracao_contatos: { label: 'Extração Contatos', icon: Users,          color: '#10b981' }
   };
+
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);

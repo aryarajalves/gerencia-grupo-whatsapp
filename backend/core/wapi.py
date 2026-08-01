@@ -31,6 +31,8 @@ ENDPOINT_MAP = {
     "documento": "/message/send-document",
     "enquete":   "/message/send-poll",
     "nome_grupo": "/group/update-group-name",
+    "status_grupo": "/group/update-group-settings",
     "revoke":    "/instances/{id}/client/action/delete-message-by-id",
     "download_media": "/message/download-media",
 }
+
