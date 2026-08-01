@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Copy, Check, Users, RefreshCw } from 'lucide-react';
+import { X, Search, Copy, Check, Users, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import axiosInstance from '../../../services/api';
 import { toastSucesso } from '../../../utils/toastNotifications';
 
@@ -9,6 +9,10 @@ const GroupContactsModal = ({ group, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [copiedAll, setCopiedAll] = useState(false);
+
+  // Estados de Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [resultsPerPage, setResultsPerPage] = useState(20);
 
   useEffect(() => {
     if (!group?.id_do_grupo) return;
@@ -41,6 +45,21 @@ const GroupContactsModal = ({ group, onClose }) => {
     const numero = (c.numero || '').toLowerCase();
     return nome.includes(term) || numero.includes(term);
   });
+
+  const totalContacts = filteredContacts.length;
+  const totalPages = Math.ceil(totalContacts / resultsPerPage) || 1;
+  const startIndex = (currentPage - 1) * resultsPerPage;
+  const paginatedContacts = filteredContacts.slice(startIndex, startIndex + resultsPerPage);
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleResultsPerPageChange = (e) => {
+    setResultsPerPage(Number(e.target.value));
+    setCurrentPage(1);
+  };
 
   const handleCopySingle = (numero, idx) => {
     if (!numero) return;
@@ -76,7 +95,6 @@ const GroupContactsModal = ({ group, onClose }) => {
         padding: '1rem'
       }}
       onClick={(e) => {
-        // Não fecha ao clicar fora, exige ação do usuário
         e.stopPropagation();
       }}
     >
@@ -84,8 +102,8 @@ const GroupContactsModal = ({ group, onClose }) => {
         className="glass-card fade-in"
         style={{
           width: '100%',
-          maxWidth: '540px',
-          maxHeight: '85vh',
+          maxWidth: '580px',
+          maxHeight: '88vh',
           background: '#161822',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '16px',
@@ -154,7 +172,7 @@ const GroupContactsModal = ({ group, onClose }) => {
               type="text" 
               placeholder="Buscar nome ou número..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               style={{
                 width: '100%',
                 padding: '8px 12px 8px 36px',
@@ -188,7 +206,7 @@ const GroupContactsModal = ({ group, onClose }) => {
           </button>
         </div>
 
-        {/* Lista de Contatos */}
+        {/* Lista de Contatos Pagina */}
         <div 
           className="custom-scroll"
           style={{
@@ -205,7 +223,7 @@ const GroupContactsModal = ({ group, onClose }) => {
               <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 10px' }} />
               <p style={{ margin: 0, fontSize: '0.85rem' }}>Carregando contatos do grupo...</p>
             </div>
-          ) : filteredContacts.length === 0 ? (
+          ) : paginatedContacts.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>
               <Users size={32} opacity={0.3} style={{ margin: '0 auto 10px' }} />
               <p style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -213,7 +231,7 @@ const GroupContactsModal = ({ group, onClose }) => {
               </p>
             </div>
           ) : (
-            filteredContacts.map((c, idx) => (
+            paginatedContacts.map((c, idx) => (
               <div 
                 key={c.id || idx}
                 style={{
@@ -237,11 +255,11 @@ const GroupContactsModal = ({ group, onClose }) => {
                 </div>
 
                 <button
-                  onClick={() => handleCopySingle(c.numero, idx)}
+                  onClick={() => handleCopySingle(c.numero, startIndex + idx)}
                   style={{
-                    background: copiedIndex === idx ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                    border: copiedIndex === idx ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                    color: copiedIndex === idx ? '#10b981' : '#fff',
+                    background: copiedIndex === (startIndex + idx) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+                    border: copiedIndex === (startIndex + idx) ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                    color: copiedIndex === (startIndex + idx) ? '#10b981' : '#fff',
                     padding: '6px 10px',
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -254,26 +272,105 @@ const GroupContactsModal = ({ group, onClose }) => {
                   }}
                   title="Copiar número de telefone"
                 >
-                  {copiedIndex === idx ? <Check size={13} /> : <Copy size={13} />}
-                  {copiedIndex === idx ? 'Copiado' : 'Copiar'}
+                  {copiedIndex === (startIndex + idx) ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedIndex === (startIndex + idx) ? 'Copiado' : 'Copiar'}
                 </button>
               </div>
             ))
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer com Paginação */}
         <div style={{
-          padding: '1rem 1.5rem',
+          padding: '0.85rem 1.5rem',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
-          justifyContent: 'flex-end',
-          background: 'rgba(255, 255, 255, 0.02)'
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(255, 255, 255, 0.02)',
+          flexWrap: 'wrap',
+          gap: '10px'
         }}>
+          {/* Seletor Exibir por página */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>Exibir:</span>
+            <select
+              value={resultsPerPage}
+              onChange={handleResultsPerPageChange}
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+                padding: '3px 6px'
+              }}
+            >
+              <option value={20} style={{ background: '#1c1e26' }}>20</option>
+              <option value={50} style={{ background: '#1c1e26' }}>50</option>
+              <option value={100} style={{ background: '#1c1e26' }}>100</option>
+              <option value={200} style={{ background: '#1c1e26' }}>200</option>
+            </select>
+          </div>
+
+          {/* Navegação de Páginas */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              {totalContacts > 0 ? `${startIndex + 1}-${Math.min(startIndex + resultsPerPage, totalContacts)} de ${totalContacts}` : '0 de 0'}
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage <= 1}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentPage <= 1 ? 0.4 : 1,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Página Anterior"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff', padding: '0 4px' }}>
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                  opacity: currentPage >= totalPages ? 0.4 : 1,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Próxima Página"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
           <button 
             className="btn btn-secondary"
             onClick={onClose}
-            style={{ padding: '8px 20px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 16px', fontSize: '0.8rem' }}
           >
             Fechar
           </button>

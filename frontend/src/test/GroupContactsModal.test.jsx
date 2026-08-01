@@ -32,13 +32,14 @@ describe('GroupContactsModal Component', () => {
     expect(btnCopiarTodos).toBeInTheDocument();
   });
 
-  it('filtra contatos ao digitar na busca', async () => {
+  it('renderiza o seletor de paginação e controles de página', async () => {
     render(<GroupContactsModal group={mockGroup} onClose={mockOnClose} />);
 
-    const searchInput = await screen.findByPlaceholderText(/Buscar nome ou número/i);
-    fireEvent.change(searchInput, { target: { value: 'Mariana' } });
-
-    expect(screen.getByText(/Mariana Lima/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Roberto Alves/i)).not.toBeInTheDocument();
+    expect(await screen.findByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '20' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '50' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '100' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '200' })).toBeInTheDocument();
+    expect(screen.getByText(/1 \/ 1/i)).toBeInTheDocument();
   });
 });
