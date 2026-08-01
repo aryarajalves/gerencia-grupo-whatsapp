@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, CalendarDays, Clock, Check, Copy, ListChecks, Pencil, PauseCircle, PlayCircle, Trash2, Repeat, Flag, AlertTriangle, Search, PlusCircle, Filter } from 'lucide-react';
+import { Users, CalendarDays, Clock, Check, Copy, ListChecks, Pencil, PauseCircle, PlayCircle, Trash2, Repeat, Flag, AlertTriangle, Search, PlusCircle, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { DIAS_SEMANA } from '../../../utils/constants';
 
 const GroupsTable = ({ 
@@ -17,23 +17,36 @@ const GroupsTable = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos'); // 'todos' | 'ativos' | 'inativos' | 'alerta'
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [cicloFilter, setCicloFilter] = useState('todos'); // 'todos' | 'semanal' | 'unico'
+  const [extracaoFilter, setExtracaoFilter] = useState('todos'); // 'todos' | 'habilitada' | 'desabilitada'
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
 
   const getGroupInitials = (name) => name ? name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : '?';
 
-  // Filtrar grupos por texto e status
+  const activeAdvancedFiltersCount = (cicloFilter !== 'todos' ? 1 : 0) + (extracaoFilter !== 'todos' ? 1 : 0);
+
+  // Filtrar grupos por texto, status, ciclo e extração
   const gruposFiltrados = grupos.filter(g => {
     const matchesSearch = (g.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (g.id_do_grupo || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     if (!matchesSearch) return false;
 
-    if (statusFilter === 'ativos') return g.ativo;
-    if (statusFilter === 'inativos') return !g.ativo;
-    if (statusFilter === 'alerta') return g.ativo && g.total_mensagens === 0;
+    if (statusFilter === 'ativos' && !g.ativo) return false;
+    if (statusFilter === 'inativos' && g.ativo) return false;
+    if (statusFilter === 'alerta' && (!g.ativo || g.total_mensagens !== 0)) return false;
+
+    if (cicloFilter === 'semanal' && g.tipo_ciclo !== 'semanal') return false;
+    if (cicloFilter === 'unico' && g.tipo_ciclo !== 'unico') return false;
+
+    if (extracaoFilter === 'habilitada' && g.extrair_contatos === false) return false;
+    if (extracaoFilter === 'desabilitada' && g.extrair_contatos !== false) return false;
+
     return true;
   });
+
 
   const totalPages = Math.ceil(gruposFiltrados.length / itemsPerPage) || 1;
   const safePage = Math.min(currentPage, totalPages);
@@ -172,9 +185,155 @@ const GroupsTable = ({
               <option value={200} style={{ background: '#161822' }}>200 / pág</option>
             </select>
           </div>
-        </div>
 
+          {/* Botão Filtros Avançados */}
+          <button
+            onClick={() => setShowAdvancedFilters(prev => !prev)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '6px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 600,
+              background: showAdvancedFilters || activeAdvancedFiltersCount > 0
+                ? 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.2))'
+                : 'rgba(255,255,255,0.04)',
+              color: showAdvancedFilters || activeAdvancedFiltersCount > 0 ? '#fff' : 'var(--text-dim)',
+              border: `1px solid ${showAdvancedFilters || activeAdvancedFiltersCount > 0 ? 'rgba(124,58,237,0.5)' : 'var(--border)'}`,
+              cursor: 'pointer', transition: 'all 0.2s',
+              boxShadow: activeAdvancedFiltersCount > 0 ? '0 0 12px rgba(124,58,237,0.25)' : 'none'
+            }}
+          >
+            <SlidersHorizontal size={14} style={{ color: activeAdvancedFiltersCount > 0 ? '#a855f7' : 'inherit' }} />
+            <span>Filtros Avançados</span>
+            {activeAdvancedFiltersCount > 0 && (
+              <span style={{
+                background: '#a855f7', color: '#fff', fontSize: '0.7rem',
+                borderRadius: '10px', padding: '1px 6px', fontWeight: 700
+              }}>
+                {activeAdvancedFiltersCount}
+              </span>
+            )}
+            <ChevronDown size={14} style={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+          </button>
+        </div>
       </div>
+
+      {/* Painel Expandível de Filtros Avançados */}
+      {showAdvancedFilters && (
+        <div style={{
+          padding: '1.25rem 1.5rem',
+          background: 'rgba(18, 20, 32, 0.95)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2.5rem',
+          flexWrap: 'wrap',
+          animation: 'fadeIn 0.2s ease-in-out'
+        }}>
+          {/* Filtro: Tipo de Ciclo */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Repeat size={13} style={{ color: 'var(--primary)' }} /> Tipo de Ciclo
+            </label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => { setCicloFilter('todos'); setCurrentPage(1); }}
+                style={{
+                  padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  background: cicloFilter === 'todos' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+                  color: cicloFilter === 'todos' ? '#fff' : 'var(--text-dim)',
+                  border: `1px solid ${cicloFilter === 'todos' ? 'rgba(255,255,255,0.2)' : 'var(--border)'}`
+                }}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => { setCicloFilter('semanal'); setCurrentPage(1); }}
+                style={{
+                  padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  background: cicloFilter === 'semanal' ? 'rgba(37,99,235,0.25)' : 'rgba(0,0,0,0.2)',
+                  color: cicloFilter === 'semanal' ? '#60a5fa' : 'var(--text-dim)',
+                  border: `1px solid ${cicloFilter === 'semanal' ? 'rgba(37,99,235,0.5)' : 'var(--border)'}`
+                }}
+              >
+                🔁 Semanal
+              </button>
+              <button
+                onClick={() => { setCicloFilter('unico'); setCurrentPage(1); }}
+                style={{
+                  padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  background: cicloFilter === 'unico' ? 'rgba(245,158,11,0.25)' : 'rgba(0,0,0,0.2)',
+                  color: cicloFilter === 'unico' ? '#fbbf24' : 'var(--text-dim)',
+                  border: `1px solid ${cicloFilter === 'unico' ? 'rgba(245,158,11,0.5)' : 'var(--border)'}`
+                }}
+              >
+                🚩 Único
+              </button>
+            </div>
+          </div>
+
+          {/* Filtro: Extração de Contatos */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={13} style={{ color: 'var(--accent)' }} /> Extração de Contatos
+            </label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => { setExtracaoFilter('todos'); setCurrentPage(1); }}
+                style={{
+                  padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  background: extracaoFilter === 'todos' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+                  color: extracaoFilter === 'todos' ? '#fff' : 'var(--text-dim)',
+                  border: `1px solid ${extracaoFilter === 'todos' ? 'rgba(255,255,255,0.2)' : 'var(--border)'}`
+                }}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => { setExtracaoFilter('habilitada'); setCurrentPage(1); }}
+                style={{
+                  padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  background: extracaoFilter === 'habilitada' ? 'rgba(34,197,94,0.2)' : 'rgba(0,0,0,0.2)',
+                  color: extracaoFilter === 'habilitada' ? '#4ade80' : 'var(--text-dim)',
+                  border: `1px solid ${extracaoFilter === 'habilitada' ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`
+                }}
+              >
+                Habilitada
+              </button>
+              <button
+                onClick={() => { setExtracaoFilter('desabilitada'); setCurrentPage(1); }}
+                style={{
+                  padding: '5px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  background: extracaoFilter === 'desabilitada' ? 'rgba(239,68,68,0.2)' : 'rgba(0,0,0,0.2)',
+                  color: extracaoFilter === 'desabilitada' ? '#f87171' : 'var(--text-dim)',
+                  border: `1px solid ${extracaoFilter === 'desabilitada' ? 'rgba(239,68,68,0.4)' : 'var(--border)'}`
+                }}
+              >
+                Desabilitada
+              </button>
+            </div>
+          </div>
+
+          {/* Botão Limpar Filtros Avançados */}
+          {activeAdvancedFiltersCount > 0 && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', height: '100%' }}>
+              <button
+                onClick={() => {
+                  setCicloFilter('todos');
+                  setExtracaoFilter('todos');
+                  setCurrentPage(1);
+                }}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600,
+                  background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)',
+                  cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px'
+                }}
+              >
+                Limpar Filtros ({activeAdvancedFiltersCount})
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
 
       {gruposFiltrados.length === 0 ? (
         <div style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
