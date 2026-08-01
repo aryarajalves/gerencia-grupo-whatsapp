@@ -82,7 +82,7 @@ const GerenciarGrupos = ({ grupos, setGrupos, mensagens, onRefresh, openConfirm 
         paddingBottom: '12px'
       }}>
         <button
-          onClick={() => setActiveSubTab('list')}
+          onClick={cancelEdit}
           style={{
             display: 'flex',
             alignItems: 'center',
