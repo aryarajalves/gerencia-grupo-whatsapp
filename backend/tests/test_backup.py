@@ -31,10 +31,12 @@ def test_backup_manual_creation(client, db_session):
 
 def test_backup_settings_update(client, db_session):
     """
-    Testa a alteração de configurações de retenção e intervalo.
+    Testa a alteração de configurações de retenção, intervalo, frequência e pasta S3.
     """
     payload = {
-        "interval_hours": 12,
+        "frequency_type": "days",
+        "interval_value": 2,
+        "s3_folder": "backups/cliente1/",
         "retencao_count": 50,
         "agendamento_ativo": False
     }
@@ -43,6 +45,8 @@ def test_backup_settings_update(client, db_session):
 
     resp_info = client.get("/backup/info")
     data = resp_info.json()
-    assert data["interval_hours"] == 12
+    assert data["frequency_type"] == "days"
+    assert data["interval_value"] == 2
+    assert data["s3_folder"] == "backups/cliente1/"
     assert data["retencao_count"] == 50
     assert data["agendamento_ativo"] is False

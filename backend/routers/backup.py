@@ -17,7 +17,7 @@ def get_backup_info(db: Session = Depends(get_db), current_user: dict = Depends(
 
 @router.get("/list")
 def list_backups(db: Session = Depends(get_db), current_user: dict = Depends(security.check_super_admin)):
-    items = backup_service.get_backup_list()
+    items = backup_service.get_backup_list(db)
     return {"total": len(items), "items": items}
 
 @router.post("/create")
@@ -41,7 +41,8 @@ async def upload_backup(
     try:
         content = await file.read()
         filename = file.filename
-        s3_uploaded = s3_helper.upload_backup_to_s3(content, filename)
+        s3_folder = backup_service.get_config_val(db, "BACKUP_S3_FOLDER", "backups/")
+        s3_uploaded = s3_helper.upload_backup_to_s3(content, filename, folder=s3_folder)
         
         # Salva cópia local
         local_path = os.path.join(backup_service.BACKUP_DIR, filename)
@@ -64,7 +65,8 @@ def download_backup(
     db: Session = Depends(get_db),
     current_user: dict = Depends(security.check_super_admin)
 ):
-    file_bytes = s3_helper.download_backup_from_s3(filename)
+    s3_folder = backup_service.get_config_val(db, "BACKUP_S3_FOLDER", "backups/")
+    file_bytes = s3_helper.download_backup_from_s3(filename, folder=s3_folder)
     if not file_bytes:
         local_path = os.path.join(backup_service.BACKUP_DIR, filename)
         if os.path.exists(local_path):
@@ -85,7 +87,8 @@ def restore_backup(
     db: Session = Depends(get_db),
     current_user: dict = Depends(security.check_super_admin)
 ):
-    file_bytes = s3_helper.download_backup_from_s3(filename)
+    s3_folder = backup_service.get_config_val(db, "BACKUP_S3_FOLDER", "backups/")
+    file_bytes = s3_helper.download_backup_from_s3(filename, folder=s3_folder)
     if not file_bytes:
         local_path = os.path.join(backup_service.BACKUP_DIR, filename)
         if os.path.exists(local_path):
@@ -104,7 +107,8 @@ def delete_backup(
     db: Session = Depends(get_db),
     current_user: dict = Depends(security.check_super_admin)
 ):
-    s3_deleted = s3_helper.delete_backup_from_s3(filename)
+    s3_folder = backup_service.get_config_val(db, "BACKUP_S3_FOLDER", "backups/")
+    s3_deleted = s3_helper.delete_backup_from_s3(filename, folder=s3_folder)
     local_path = os.path.join(backup_service.BACKUP_DIR, filename)
     if os.path.exists(local_path):
         try:
@@ -120,11 +124,16 @@ def update_backup_settings(
     db: Session = Depends(get_db),
     current_user: dict = Depends(security.check_super_admin)
 ):
-    if "interval_hours" in payload:
-        backup_service.set_config_val(db, "BACKUP_INTERVAL_HOURS", payload["interval_hours"])
+    if "frequency_type" in payload:
+        backup_service.set_config_val(db, "BACKUP_FREQUENCY_TYPE", payload["frequency_type"])
+    if "interval_value" in payload:
+        backup_service.set_config_val(db, "BACKUP_INTERVAL_VALUE", payload["interval_value"])
+        backup_service.set_config_val(db, "BACKUP_INTERVAL_HOURS", payload["interval_value"])
+    if "s3_folder" in payload:
+        backup_service.set_config_val(db, "BACKUP_S3_FOLDER", payload["s3_folder"])
     if "retencao_count" in payload:
         backup_service.set_config_val(db, "BACKUP_RETENTION_COUNT", payload["retencao_count"])
     if "agendamento_ativo" in payload:
         backup_service.set_config_val(db, "BACKUP_AUTO_ENABLED", str(payload["agendamento_ativo"]).lower())
 
-    return {"status": "success", "message": "Configurações de backup atualizadas com sucesso!"}
+    return {"status": "success", "message": "Configurações de backup salvas com sucesso!"}

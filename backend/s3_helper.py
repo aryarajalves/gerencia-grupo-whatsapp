@@ -43,12 +43,21 @@ def is_s3_configured():
     """Verifica se as variáveis do S3/Backblaze B2 estão devidamente preenchidas."""
     return bool(S3_ENDPOINT_URL and S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY and S3_BUCKET_NAME)
 
-def upload_backup_to_s3(file_bytes, file_name):
-    """Uploads a backup dump to the backups/ folder in Backblaze B2 S3."""
+def sanitize_folder(folder):
+    if not folder:
+        return "backups/"
+    folder = folder.strip()
+    if not folder.endswith("/"):
+        folder = folder + "/"
+    return folder
+
+def upload_backup_to_s3(file_bytes, file_name, folder="backups/"):
+    """Uploads a backup dump to the specified folder in Backblaze B2 S3."""
     if not is_s3_configured():
         return False
     s3 = get_s3_client()
-    key = f"backups/{file_name}" if not file_name.startswith("backups/") else file_name
+    prefix = sanitize_folder(folder)
+    key = f"{prefix}{file_name}" if not file_name.startswith(prefix) else file_name
     s3.put_object(
         Bucket=S3_BUCKET_NAME,
         Key=key,
@@ -57,18 +66,19 @@ def upload_backup_to_s3(file_bytes, file_name):
     )
     return True
 
-def list_backups_from_s3():
-    """Lists all backup objects stored under backups/ in Backblaze B2 S3."""
+def list_backups_from_s3(folder="backups/"):
+    """Lists all backup objects stored under specified folder in Backblaze B2 S3."""
     if not is_s3_configured():
         return []
     s3 = get_s3_client()
+    prefix = sanitize_folder(folder)
     try:
-        response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="backups/")
+        response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
         items = []
         for obj in response.get('Contents', []):
             key = obj['Key']
-            filename = key.replace("backups/", "")
-            if not filename:
+            filename = key.replace(prefix, "")
+            if not filename or filename.endswith("/"):
                 continue
             items.append({
                 "filename": filename,
@@ -82,12 +92,13 @@ def list_backups_from_s3():
         print(f"Erro ao listar backups do S3: {e}")
         return []
 
-def download_backup_from_s3(file_name):
+def download_backup_from_s3(file_name, folder="backups/"):
     """Downloads object bytes from Backblaze B2 S3."""
     if not is_s3_configured():
         return None
     s3 = get_s3_client()
-    key = f"backups/{file_name}" if not file_name.startswith("backups/") else file_name
+    prefix = sanitize_folder(folder)
+    key = f"{prefix}{file_name}" if not file_name.startswith(prefix) else file_name
     try:
         obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=key)
         return obj['Body'].read()
@@ -95,12 +106,13 @@ def download_backup_from_s3(file_name):
         print(f"Erro ao baixar backup {file_name} do S3: {e}")
         return None
 
-def delete_backup_from_s3(file_name):
+def delete_backup_from_s3(file_name, folder="backups/"):
     """Deletes backup object from Backblaze B2 S3."""
     if not is_s3_configured():
         return False
     s3 = get_s3_client()
-    key = f"backups/{file_name}" if not file_name.startswith("backups/") else file_name
+    prefix = sanitize_folder(folder)
+    key = f"{prefix}{file_name}" if not file_name.startswith(prefix) else file_name
     try:
         s3.delete_object(Bucket=S3_BUCKET_NAME, Key=key)
         return True

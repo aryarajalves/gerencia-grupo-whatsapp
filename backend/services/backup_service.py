@@ -90,7 +90,8 @@ def execute_backup(db):
     Executa um backup imediato: gera o arquivo, salva localmente e faz upload pro Backblaze B2 S3.
     """
     filename, file_bytes = generate_database_dump()
-    s3_success = s3_helper.upload_backup_to_s3(file_bytes, filename)
+    s3_folder = get_config_val(db, "BACKUP_S3_FOLDER", "backups/")
+    s3_success = s3_helper.upload_backup_to_s3(file_bytes, filename, folder=s3_folder)
 
     agora = datetime.now(BRASILIA)
     set_config_val(db, "BACKUP_LAST_RUN", agora.isoformat())
@@ -98,7 +99,7 @@ def execute_backup(db):
 
     # Limpeza de backups antigos pela retenção
     retencao_limit = int(get_config_val(db, "BACKUP_RETENTION_COUNT", "30"))
-    clean_old_backups(db, retencao_limit)
+    clean_old_backups(db, retencao_limit, folder=s3_folder)
 
     return {
         "filename": filename,
@@ -107,14 +108,14 @@ def execute_backup(db):
         "s3_uploaded": s3_success
     }
 
-def clean_old_backups(db, limit):
+def clean_old_backups(db, limit, folder="backups/"):
     """Deleta backups antigos no S3 e no disco local quando exceder o limite de retenção."""
     try:
-        s3_items = s3_helper.list_backups_from_s3()
+        s3_items = s3_helper.list_backups_from_s3(folder=folder)
         if len(s3_items) > limit:
             to_delete = s3_items[limit:]
             for item in to_delete:
-                s3_helper.delete_backup_from_s3(item['filename'])
+                s3_helper.delete_backup_from_s3(item['filename'], folder=folder)
                 logger.info(f"Backup antigo deletado da retenção do S3: {item['filename']}")
     except Exception as e:
         logger.error(f"Erro ao aplicar política de retenção no S3: {e}")
@@ -124,7 +125,10 @@ def get_backup_info(db):
     agora = datetime.now(BRASILIA)
     last_run_str = get_config_val(db, "BACKUP_LAST_RUN", None)
     last_file = get_config_val(db, "BACKUP_LAST_FILE", None)
-    interval_hours = int(get_config_val(db, "BACKUP_INTERVAL_HOURS", "6"))
+
+    frequency_type = get_config_val(db, "BACKUP_FREQUENCY_TYPE", "hours") # 'hours' | 'days'
+    interval_value = int(get_config_val(db, "BACKUP_INTERVAL_VALUE", get_config_val(db, "BACKUP_INTERVAL_HOURS", "6")))
+    s3_folder = get_config_val(db, "BACKUP_S3_FOLDER", "backups/")
     retencao_count = int(get_config_val(db, "BACKUP_RETENTION_COUNT", "30"))
     agendamento_ativo = get_config_val(db, "BACKUP_AUTO_ENABLED", "true").lower() == "true"
     s3_configured = s3_helper.is_s3_configured()
@@ -143,41 +147,63 @@ def get_backup_info(db):
                 "datetime": last_run_str
             }
 
-    # Calcula o próximo backup
+    # Calcula o próximo backup baseado em horas ou dias
+    delta = timedelta(hours=interval_value) if frequency_type == "hours" else timedelta(days=interval_value)
+    
     proximo_backup = None
     if agendamento_ativo:
         if last_run_str:
             try:
                 dt_last = datetime.fromisoformat(last_run_str)
-                dt_next = dt_last + timedelta(hours=interval_hours)
+                dt_next = dt_last + delta
                 if dt_next < agora:
                     dt_next = agora + timedelta(minutes=10)
             except Exception:
-                dt_next = agora + timedelta(hours=interval_hours)
+                dt_next = agora + delta
         else:
-            dt_next = agora + timedelta(hours=interval_hours)
+            dt_next = agora + delta
 
         proximo_backup = {
             "datetime": dt_next.strftime("%d/%m/%Y, %H:%M:%S"),
-            "interval_hours": interval_hours
+            "interval_value": interval_value,
+            "frequency_type": frequency_type
         }
 
     return {
         "ultimo_backup": ultimo_backup,
         "proximo_backup": proximo_backup,
         "retencao_count": retencao_count,
-        "interval_hours": interval_hours,
+        "frequency_type": frequency_type,
+        "interval_value": interval_value,
+        "interval_hours": interval_value if frequency_type == "hours" else interval_value * 24,
+        "s3_folder": s3_folder,
         "agendamento_ativo": agendamento_ativo,
         "s3_configurado": s3_configured
     }
 
-def get_backup_list():
+def get_backup_list(db=None):
     """Retorna a lista de backups salvos no Backblaze B2 S3 com fallback para backups locais."""
-    s3_items = s3_helper.list_backups_from_s3()
+    s3_folder = get_config_val(db, "BACKUP_S3_FOLDER", "backups/") if db else "backups/"
+    s3_items = s3_helper.list_backups_from_s3(folder=s3_folder)
     if s3_items:
         return s3_items
 
     # Fallback para pasta local se S3 não retornar nada
+    local_items = []
+    if os.path.exists(BACKUP_DIR):
+        for f in os.listdir(BACKUP_DIR):
+            if f.endswith('.dump') or f.endswith('.gz') or f.endswith('.sql'):
+                full_path = os.path.join(BACKUP_DIR, f)
+                stat = os.stat(full_path)
+                dt = datetime.fromtimestamp(stat.st_mtime, tz=BRASILIA)
+                local_items.append({
+                    "filename": f,
+                    "key": f"local/{f}",
+                    "size_bytes": stat.st_size,
+                    "last_modified": dt.isoformat()
+                })
+        local_items.sort(key=lambda x: x['last_modified'], reverse=True)
+    return local_items
     local_items = []
     if os.path.exists(BACKUP_DIR):
         for f in os.listdir(BACKUP_DIR):

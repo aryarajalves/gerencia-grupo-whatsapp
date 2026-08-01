@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Database, CheckCircle2, Clock, Shield, UploadCloud, Download, RotateCcw, Trash2, RefreshCw, Calendar, FileText } from 'lucide-react';
+import { Database, CheckCircle2, Clock, Shield, UploadCloud, Download, RotateCcw, Trash2, RefreshCw, Calendar, FileText, Settings } from 'lucide-react';
 import axiosInstance from '../../services/api';
 import { toastSucesso, toastErro } from '../../utils/toastNotifications';
 
@@ -13,7 +13,41 @@ const Backup = ({ openConfirm }) => {
     s3_configurado: false
   });
 
-  const [backups, setBackups] = useState([]);
+  const [frequencyType, setFrequencyType] = useState('hours');
+  const [intervalValue, setIntervalValue] = useState(6);
+  const [s3Folder, setS3Folder] = useState('backups/');
+  const [retencaoCount, setRetencaoCount] = useState(30);
+  const [agendamentoAtivo, setAgendamentoAtivo] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  useEffect(() => {
+    if (info) {
+      if (info.frequency_type) setFrequencyType(info.frequency_type);
+      if (info.interval_value) setIntervalValue(info.interval_value);
+      if (info.s3_folder) setS3Folder(info.s3_folder);
+      if (info.retencao_count) setRetencaoCount(info.retencao_count);
+      if (info.agendamento_ativo !== undefined) setAgendamentoAtivo(info.agendamento_ativo);
+    }
+  }, [info]);
+
+  const handleSaveAllSettings = async () => {
+    try {
+      setSavingSettings(true);
+      await axiosInstance.post('/backup/settings', {
+        frequency_type: frequencyType,
+        interval_value: Number(intervalValue),
+        s3_folder: s3Folder,
+        retencao_count: Number(retencaoCount),
+        agendamento_ativo: agendamentoAtivo
+      });
+      toastSucesso('Configuração Salva!', 'As preferências de agendamento automático foram atualizadas.');
+      fetchBackupInfo();
+    } catch (err) {
+      toastErro('Erro ao Salvar', 'Não foi possível atualizar as configurações de agendamento.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
   const [loadingInfo, setLoadingInfo] = useState(true);
   const [loadingList, setLoadingList] = useState(true);
   const [creatingBackup, setCreatingBackup] = useState(false);
@@ -325,66 +359,161 @@ const Backup = ({ openConfirm }) => {
       </div>
 
       {/* Seção 3: Agendamento Automático */}
-      <div className="glass-card" style={{ padding: '1.5rem', background: 'rgba(15, 18, 28, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Calendar size={20} style={{ color: '#a855f7' }} />
+      <div className="glass-card" style={{ padding: '1.75rem', background: 'rgba(15, 18, 28, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Calendar size={22} style={{ color: '#a855f7' }} />
           Agendamento Automático
         </h3>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.03)', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.06)', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Agendamento Ativado</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Backups serão realizados automaticamente.</div>
-          </div>
-
-          <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px', cursor: 'pointer' }}>
+        {/* Sub-card do Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255, 255, 255, 0.03)', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px', cursor: 'pointer', flexShrink: 0 }}>
             <input 
               type="checkbox" 
-              checked={info.agendamento_ativo}
-              onChange={e => handleToggleAuto(e.target.checked)}
+              checked={agendamentoAtivo}
+              onChange={e => setAgendamentoAtivo(e.target.checked)}
               style={{ opacity: 0, width: 0, height: 0 }} 
             />
             <span style={{
               position: 'absolute', inset: 0,
-              backgroundColor: info.agendamento_ativo ? '#2563eb' : 'rgba(255,255,255,0.2)',
+              backgroundColor: agendamentoAtivo ? '#2563eb' : 'rgba(255,255,255,0.2)',
               borderRadius: '34px', transition: '0.3s'
             }}>
               <span style={{
                 position: 'absolute', content: '""', height: '20px', width: '20px',
-                left: info.agendamento_ativo ? '26px' : '3px', bottom: '3px',
+                left: agendamentoAtivo ? '26px' : '3px', bottom: '3px',
                 backgroundColor: 'white', borderRadius: '50%', transition: '0.3s'
               }} />
             </span>
           </label>
+
+          <div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Agendamento Ativado</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Backups serão realizados automaticamente.</div>
+          </div>
         </div>
 
-        {/* Seletores de Intervalo e Retenção */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dim)' }}>Intervalo de Backup:</label>
+        {/* Linha 1: Frequência e Valor do Intervalo */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>Frequência</label>
             <select
-              value={info.interval_hours}
-              onChange={e => handleUpdateSettings('interval_hours', e.target.value)}
-              style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
+              value={frequencyType}
+              onChange={e => setFrequencyType(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '10px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                outline: 'none'
+              }}
             >
-              <option value={6} style={{ background: '#161822' }}>A cada 6 horas</option>
-              <option value={12} style={{ background: '#161822' }}>A cada 12 horas</option>
-              <option value={24} style={{ background: '#161822' }}>A cada 24 horas (diário)</option>
+              <option value="hours" style={{ background: '#161822' }}>A cada X horas</option>
+              <option value="days" style={{ background: '#161822' }}>A cada X dias</option>
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dim)' }}>Limite de Retenção (S3):</label>
-            <select
-              value={info.retencao_count}
-              onChange={e => handleUpdateSettings('retencao_count', e.target.value)}
-              style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' }}
-            >
-              <option value={10} style={{ background: '#161822' }}>Manter últimos 10 backups</option>
-              <option value={30} style={{ background: '#161822' }}>Manter últimos 30 backups</option>
-              <option value={50} style={{ background: '#161822' }}>Manter últimos 50 backups</option>
-            </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>Valor do Intervalo</label>
+            <input 
+              type="number"
+              min="1"
+              value={intervalValue}
+              onChange={e => setIntervalValue(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '10px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              Backup a cada <strong>{intervalValue || 6}</strong> {frequencyType === 'hours' ? 'hora(s)' : 'dia(s)'}
+            </div>
           </div>
+        </div>
+
+        {/* Linha 2: Pasta do Backup no S3 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>Pasta do Backup no S3</label>
+          <input 
+            type="text"
+            value={s3Folder}
+            onChange={e => setS3Folder(e.target.value)}
+            placeholder="backups/"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '10px',
+              color: '#fff',
+              fontSize: '0.9rem',
+              boxSizing: 'border-box'
+            }}
+          />
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+            Subpasta onde os backups serão salvos no bucket do Backblaze S3. Ex: backups/ ou backups/cliente1/.
+          </div>
+        </div>
+
+        {/* Linha 3: Retenção */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>Retenção — Máximo de Backups no S3</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <input 
+              type="number"
+              min="1"
+              value={retencaoCount}
+              onChange={e => setRetencaoCount(e.target.value)}
+              style={{
+                width: '100px',
+                padding: '10px 14px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '10px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                textAlign: 'center'
+              }}
+            />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+              backups — os mais antigos serão excluídos automaticamente.
+            </span>
+          </div>
+        </div>
+
+        {/* Botão Roxo Salvar Configuração */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <button
+            onClick={handleSaveAllSettings}
+            disabled={savingSettings}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '11px 26px',
+              background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(147, 51, 234, 0.3)',
+              transition: 'all 0.2s'
+            }}
+          >
+            {savingSettings ? <RefreshCw size={18} className="animate-spin" /> : <Settings size={18} />}
+            {savingSettings ? 'Salvando...' : 'Salvar Configuração'}
+          </button>
         </div>
       </div>
 
