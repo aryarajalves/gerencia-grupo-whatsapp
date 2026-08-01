@@ -55,6 +55,8 @@ describe('CapturaMensagens - Abas e Filtros', () => {
     // Verifica filtros
     expect(await screen.findByPlaceholderText(/Buscar no conteúdo ou remetente/i)).toBeInTheDocument();
     expect(await screen.findByRole('option', { name: 'Grupo Lançamento' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Todas as Origens' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Disparo Automático (Sistema)' })).toBeInTheDocument();
 
     // Verifica renderização do documento com anexo
     expect(await screen.findByText(/Ver Anexo \/ Documento/i)).toBeInTheDocument();

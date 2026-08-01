@@ -19,6 +19,7 @@ const CapturaMensagens = ({ openConfirm }) => {
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroGrupo, setFiltroGrupo] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('');
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
   
@@ -55,6 +56,7 @@ const CapturaMensagens = ({ openConfirm }) => {
           offset: (currentPage - 1) * resultsPerPage,
           search: searchTerm || undefined,
           group_jid: filtroGrupo || undefined,
+          origem: filtroOrigem || undefined,
           data_inicio: filtroDataInicio || undefined,
           data_fim: filtroDataFim || undefined
         }
@@ -88,7 +90,7 @@ const CapturaMensagens = ({ openConfirm }) => {
     fetchMensagens();
     const interval = setInterval(fetchMensagens, 15000);
     return () => clearInterval(interval);
-  }, [currentPage, searchTerm, filtroGrupo, filtroDataInicio, filtroDataFim, resultsPerPage]);
+  }, [currentPage, searchTerm, filtroGrupo, filtroOrigem, filtroDataInicio, filtroDataFim, resultsPerPage]);
 
   const handleDelete = (id) => {
     openConfirm(
@@ -141,6 +143,7 @@ const CapturaMensagens = ({ openConfirm }) => {
   const limparFiltros = () => {
     setSearchTerm('');
     setFiltroGrupo('');
+    setFiltroOrigem('');
     setFiltroDataInicio('');
     setFiltroDataFim('');
     setCurrentPage(1);
@@ -251,6 +254,24 @@ const CapturaMensagens = ({ openConfirm }) => {
                       {g.nome}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              {/* Dropdown por Origem */}
+              <div style={{ width: '220px', position: 'relative' }}>
+                <Filter size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none', zIndex: 1 }} />
+                <select 
+                  value={filtroOrigem} 
+                  onChange={e => {
+                    setFiltroOrigem(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{ padding: '0 24px 0 36px', height: '40px', lineHeight: '40px', width: '100%', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                >
+                  <option value="">Todas as Origens</option>
+                  <option value="sistema">Disparo Automático (Sistema)</option>
+                  <option value="usuario">Usuário / Lead no Grupo</option>
+                  <option value="chat">Chat de Grupos</option>
                 </select>
               </div>
 

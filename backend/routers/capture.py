@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response, Query
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 import uuid
 import os
 import httpx
@@ -39,10 +39,13 @@ def listar_mensagens_capturadas(
     group_jid: Optional[str] = None,
     data_inicio: Optional[date] = Query(None),
     data_fim: Optional[date] = Query(None),
+    origem: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     cid = get_active_client_id(db)
-    query = db.query(models.MensagemCapturada).filter(models.MensagemCapturada.cliente_id == cid)
+    query = db.query(models.MensagemCapturada).filter(
+        or_(models.MensagemCapturada.cliente_id == cid, models.MensagemCapturada.cliente_id.is_(None))
+    )
     
     if group_jid:
         query = query.filter(models.MensagemCapturada.group_jid == group_jid)
@@ -52,6 +55,25 @@ def listar_mensagens_capturadas(
 
     if data_fim:
         query = query.filter(func.date(models.MensagemCapturada.timestamp) <= data_fim)
+
+    if origem:
+        origem_clean = origem.lower().strip()
+        if origem_clean in ["sistema", "disparo_automatico"]:
+            query = query.filter(
+                models.MensagemCapturada.from_me == True,
+                (models.MensagemCapturada.sender_name.ilike("%Disparo Automático%") | 
+                 models.MensagemCapturada.sender_number.ilike("%Sistema%") |
+                 models.MensagemCapturada.sender_name.ilike("%Sistema%"))
+            )
+        elif origem_clean in ["usuario", "lead", "grupo"]:
+            query = query.filter(models.MensagemCapturada.from_me == False)
+        elif origem_clean in ["chat", "chat_grupos"]:
+            query = query.filter(
+                models.MensagemCapturada.from_me == True,
+                (models.MensagemCapturada.sender_name.ilike("%Você%") | 
+                 models.MensagemCapturada.sender_name.ilike("%Chat%") |
+                 models.MensagemCapturada.sender_number.ilike("%Bot%"))
+            )
 
     if search:
         query = query.filter(
