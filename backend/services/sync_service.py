@@ -115,6 +115,30 @@ def fetch_participants(client, wapi_base, instance_id, group_id, headers):
     
     return None
 
+
+def disparar_webhook_contato(webhook_url: str, contato: dict, grupo: dict):
+    """
+    Envia dados de um contato novo para o webhook configurado no grupo.
+    Falhas são apenas logadas, sem bloquear o ciclo de extração.
+    """
+    try:
+        payload = {
+            "nome": contato.get("nome") or contato.get("numero"),
+            "numero": contato.get("numero"),
+            "grupo": grupo.get("nome"),
+            "grupo_jid": grupo.get("jid"),
+            "extraido_em": datetime.now(BR_TZ).isoformat()
+        }
+        with httpx.Client(timeout=10.0) as wh_client:
+            resp = wh_client.post(webhook_url, json=payload, headers={"Content-Type": "application/json"})
+            if resp.status_code < 200 or resp.status_code >= 300:
+                print(f"W-API Webhook: URL '{webhook_url}' retornou {resp.status_code} para contato {contato.get('numero')}.")
+            else:
+                print(f"W-API Webhook: Contato {contato.get('numero')} enviado com sucesso para {webhook_url}.")
+    except Exception as e:
+        print(f"W-API Webhook: Erro ao disparar para '{webhook_url}': {e}")
+
+
 def atualizar_contagem_contatos(db):
     """Busca grupos ativos e sincroniza contatos via W-API."""
     try:
@@ -179,6 +203,8 @@ def atualizar_contagem_contatos(db):
                     db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
                     db.commit()
 
+                    novos_contatos = []  # Lista de contatos novos para enviar ao webhook
+
                     for p in participants:
                         try:
                             p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
@@ -197,6 +223,8 @@ def atualizar_contagem_contatos(db):
                                     extraido_em=datetime.now(BR_TZ).replace(tzinfo=None)
                                 )
                                 db.add(novo)
+                                # Rastreia como contato novo para o webhook
+                                novos_contatos.append({"nome": p_nome, "numero": p_numero})
                             else:
                                 if p_nome: existe.nome = p_nome
                                 existe.no_grupo = True
@@ -204,11 +232,19 @@ def atualizar_contagem_contatos(db):
                         except Exception as ep:
                             print(f"Erro participante {p.get('id')}: {ep}")
                     
+                    # Dispara webhook para contatos novos (se configurado)
+                    webhook_url = getattr(grupo, 'webhook_extracao_url', None)
+                    if webhook_url and novos_contatos:
+                        print(f"W-API Webhook: Enviando {len(novos_contatos)} novo(s) contato(s) para {webhook_url}")
+                        grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
+                        for contato_novo in novos_contatos:
+                            disparar_webhook_contato(webhook_url, contato_novo, grupo_info)
+
                     # Salva log de sucesso no Histórico
                     log_sucesso = models.LogDisparo(
                         cliente_id=grupo.cliente_id,
                         grupo_nome=grupo.nome,
-                        mensagem_corpo=f"Extração de contatos realizada ({len(participants)} contatos encontrados)",
+                        mensagem_corpo=f"Extração de contatos realizada ({len(participants)} contatos encontrados, {len(novos_contatos)} novos)",
                         status="SUCESSO",
                         tipo="extracao_contatos",
                         criado_em=agora

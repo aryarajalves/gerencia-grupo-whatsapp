@@ -44,7 +44,7 @@ services:
     networks:
       - network_swarm_public
     ports:
-      - "8000:8000"
+      - "8001:8000"
 
   # Worker (Agendador de Tarefas / Disparos)
   worker:
@@ -71,7 +71,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8001
       - VITE_API_SECRET=8f8e7d6c5b4a39281726354455667788
     depends_on:
       - backend

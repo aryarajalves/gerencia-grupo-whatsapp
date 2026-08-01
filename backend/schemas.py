@@ -38,6 +38,7 @@ class GrupoWhatsAppBase(BaseModel):
     extrair_contatos: bool = True
     intervalo_extracao_minutos: int = 30
     ultima_extracao_em: Optional[datetime] = None
+    webhook_extracao_url: Optional[str] = None  # URL para receber novos contatos extraídos via POST
 
 class GrupoWhatsAppCreate(GrupoWhatsAppBase):
     pass

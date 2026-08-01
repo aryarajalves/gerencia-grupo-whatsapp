@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, ExternalLink, Search, CalendarDays, PlusCircle, Pencil, CheckCircle2, ChevronDown, RefreshCw, Repeat, Flag } from 'lucide-react';
+import { Users, ExternalLink, Search, CalendarDays, PlusCircle, Pencil, CheckCircle2, ChevronDown, RefreshCw, Repeat, Flag, Webhook } from 'lucide-react';
 import { ModalPortal } from '../../../components/common';
 import { DIAS_SEMANA } from '../../../utils/constants';
 
@@ -161,6 +161,47 @@ const GroupForm = ({
             </p>
           </div>
         </div>
+
+        {/* Webhook de Extração de Contatos — visível apenas quando habilitado */}
+        {novoGrupo.extrair_contatos !== false && (
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label-premium">
+              <Webhook size={12} /> Webhook de Contatos <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: '0.7rem' }}>(Opcional)</span>
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Webhook
+                size={13}
+                style={{
+                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+                  color: novoGrupo.webhook_extracao_url ? 'var(--accent)' : 'var(--text-dim)',
+                  transition: 'color 0.2s'
+                }}
+              />
+              <input
+                value={novoGrupo.webhook_extracao_url || ''}
+                onChange={e => setNovoGrupo({ ...novoGrupo, webhook_extracao_url: e.target.value })}
+                placeholder="https://hook.plataforma.com/webhook/..."
+                style={{
+                  width: '100%',
+                  paddingLeft: '2.2rem',
+                  border: novoGrupo.webhook_extracao_url
+                    ? '1px solid rgba(124,58,237,0.5)'
+                    : '1px solid var(--border)',
+                  background: novoGrupo.webhook_extracao_url
+                    ? 'rgba(124,58,237,0.04)'
+                    : undefined,
+                  transition: 'border 0.2s, background 0.2s'
+                }}
+              />
+            </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {novoGrupo.webhook_extracao_url
+                ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />Novos contatos extraídos serão enviados automaticamente via POST para esta URL.</>
+                : <>Deixe em branco para não usar. Quando preenchida, cada novo contato extraído é enviado via POST automaticamente.</>
+              }
+            </p>
+          </div>
+        )}
 
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="label-premium"><ExternalLink size={12} /> Link de Convite (Manual)</label>

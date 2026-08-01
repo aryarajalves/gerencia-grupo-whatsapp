@@ -58,6 +58,7 @@ class GrupoWhatsApp(Base):
     extrair_contatos = Column(Boolean, default=True)
     intervalo_extracao_minutos = Column(Integer, default=30)
     ultima_extracao_em = Column(DateTime, nullable=True)
+    webhook_extracao_url = Column(String, nullable=True)  # URL para envio de novos contatos extraídos
 
 
 class MensagemDisparada(Base):

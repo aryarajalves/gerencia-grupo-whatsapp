@@ -18,6 +18,15 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
 
 ---
 
+### [2026-08-01] Webhook de Extração de Contatos por Grupo
+- **Tabela Afetada:** `grupos_whatsapp`
+- **Coluna Adicionada:**
+  - `webhook_extracao_url` (TEXT NULL) — URL externa para receber dados de novos contatos extraídos via POST
+- **Script de Migração:** `backend/scripts/add_webhook_extracao_url.py`
+- **Descrição:** Quando preenchida, a cada extração de contatos, cada contato novo (recém-inserido no banco) é enviado via HTTP POST para esta URL com payload: `{nome, numero, grupo, grupo_jid, extraido_em}`. Falhas no webhook são apenas logadas e não interrompem a extração.
+
+---
+
 ### [2026-08-01] Configurações de Extração de Contatos por Grupo
 - **Tabela Afetada:** `grupos_whatsapp`
 - **Colunas Adicionadas:**
