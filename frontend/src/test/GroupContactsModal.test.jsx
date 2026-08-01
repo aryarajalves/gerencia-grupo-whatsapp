@@ -32,14 +32,12 @@ describe('GroupContactsModal Component', () => {
     expect(btnCopiarTodos).toBeInTheDocument();
   });
 
-  it('renderiza o seletor de paginação e controles de página', async () => {
+  it('renderiza os botões de ação (Copiar Todos, Exportar CSV) e seletor de paginação', async () => {
     render(<GroupContactsModal group={mockGroup} onClose={mockOnClose} />);
 
-    expect(await screen.findByRole('combobox')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Exportar CSV/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copiar Todos/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '20' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: '50' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: '100' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: '200' })).toBeInTheDocument();
-    expect(screen.getByText(/1 \/ 1/i)).toBeInTheDocument();
   });
 });

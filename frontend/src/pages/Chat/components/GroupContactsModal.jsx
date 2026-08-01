@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Copy, Check, Users, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Search, Copy, Check, Users, RefreshCw, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import axiosInstance from '../../../services/api';
 import { toastSucesso } from '../../../utils/toastNotifications';
 
@@ -79,6 +79,31 @@ const GroupContactsModal = ({ group, onClose }) => {
       `${contacts.length} número(s) de telefone do grupo foram copiados.`
     );
     setTimeout(() => setCopiedAll(false), 2000);
+  };
+
+  const handleExportCSV = () => {
+    if (contacts.length === 0) return;
+
+    const headers = ['Nome', 'Numero', 'Grupo'];
+    const rows = contacts.map(c => [
+      `"${(c.nome || 'Sem nome').replace(/"/g, '""')}"`,
+      `"${(c.numero || '').replace(/"/g, '""')}"`,
+      `"${(group?.nome || 'Grupo').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    const groupCleanName = (group?.nome || 'grupo').replace(/[^a-zA-Z0-9_-]/g, '_');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `contatos_${groupCleanName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toastSucesso('CSV Exportado!', `${contacts.length} contatos exportados com sucesso.`);
   };
 
   return (
@@ -185,6 +210,28 @@ const GroupContactsModal = ({ group, onClose }) => {
               }}
             />
           </div>
+
+          <button
+            onClick={handleExportCSV}
+            disabled={contacts.length === 0}
+            className="btn btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '0 14px',
+              height: '37px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#fff'
+            }}
+          >
+            <Download size={14} />
+            Exportar CSV
+          </button>
 
           <button
             onClick={handleCopyAll}
