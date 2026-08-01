@@ -317,7 +317,17 @@ const MessagesModal = ({
                                           <button onClick={(e) => { e.stopPropagation(); setViewingMsgDetail(m); }} className="btn-icon-secondary" style={{ padding: 0 }} title="Ver detalhes">
                                             <Eye size={12} />
                                           </button>
-                                          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: selecionada ? '#fff' : cfg.color }}>{cfg.label}</span>
+                                          <span style={{ 
+                                            fontSize: '0.65rem', 
+                                            fontWeight: 700, 
+                                            color: selecionada ? '#fff' : (m.tipo_de_mensagem === 'status_grupo' ? ((m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '#10b981' : '#ec4899') : cfg.color) 
+                                          }}>
+                                            {m.tipo_de_mensagem === 'status_grupo' 
+                                              ? ((m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '🔓 ABRIR GRUPO' : '🔒 FECHAR GRUPO') 
+                                              : cfg.label
+                                            }
+                                          </span>
+
                                           
                                           <span style={{
                                             padding: '2px 6px',
