@@ -43,36 +43,29 @@ const renderDashboard = (props = {}) => render(
 describe('Dashboard - Seletor de Grupo e Consolidação de Avisos', () => {
   it('renderiza o seletor de grupos no cabeçalho com a opção padrão "Todos os Grupos"', () => {
     renderDashboard();
-    expect(screen.getByText('Filtrar por Grupo:')).toBeInTheDocument();
+    expect(screen.getByText('Filtrar por:')).toBeInTheDocument();
     expect(screen.getByText('Todos os Grupos (2)')).toBeInTheDocument();
   });
 
-  it('exibe aviso consolidado para múltiplos grupos sem mensagens quando TODOS está selecionado', () => {
+  it('permite buscar e selecionar um grupo no seletor do cabeçalho', () => {
     renderDashboard();
-    expect(screen.getByText('Aviso de Configuração')).toBeInTheDocument();
-    expect(screen.getByText('2 GRUPOS')).toBeInTheDocument();
-    expect(screen.getByText('Ver Grupos (2)')).toBeInTheDocument();
-  });
+    const btnDropdown = screen.getByText('Todos os Grupos (2)');
+    fireEvent.click(btnDropdown);
 
-  it('expande a lista de grupos sem mensagem ao clicar em "Ver Grupos"', () => {
-    renderDashboard();
-    const btnExpandir = screen.getByText('Ver Grupos (2)');
-    fireEvent.click(btnExpandir);
+    const inputBusca = screen.getByPlaceholderText('Digite para buscar grupo...');
+    expect(inputBusca).toBeInTheDocument();
+    fireEvent.change(inputBusca, { target: { value: 'Alfa' } });
 
-    expect(screen.getByPlaceholderText('Buscar grupo sem mensagem...')).toBeInTheDocument();
     expect(screen.getByText('Grupo Alfa 001')).toBeInTheDocument();
-    expect(screen.getByText('Grupo Beta 002')).toBeInTheDocument();
-  });
+    expect(screen.queryByText('Grupo Beta 002')).not.toBeInTheDocument();
 
-  it('filtra o Dashboard para um grupo específico ao selecionar no dropdown', () => {
-    renderDashboard();
-    const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: '111@g.us' } });
+    fireEvent.click(screen.getByText('Grupo Alfa 001'));
 
     // Próximos disparos deve mostrar apenas o disparo do Grupo Alfa 001
     expect(screen.getByText('Mensagem Alfa')).toBeInTheDocument();
     expect(screen.queryByText('Mensagem Beta')).not.toBeInTheDocument();
   });
+
 
   it('renderiza os dias do Ciclo Atual em linhas compactas e permite expandir os grupos do dia', () => {
     renderDashboard();
