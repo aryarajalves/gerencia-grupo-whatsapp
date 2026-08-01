@@ -98,3 +98,7 @@ export const toastDeletado = (titulo = 'Grupo Excluído', detalhe = '') => {
 export const toastSucesso = (titulo = 'Sucesso', detalhe = '') => {
   toast.success(detalhe ? `${titulo}: ${detalhe}` : titulo, { duration: 4000, position: 'top-right' });
 };
+
+export const toastErro = (titulo = 'Erro', detalhe = '') => {
+  toast.error(detalhe ? `${titulo}: ${detalhe}` : titulo, { duration: 4000, position: 'top-right' });
+};

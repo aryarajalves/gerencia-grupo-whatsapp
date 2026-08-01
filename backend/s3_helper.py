@@ -33,10 +33,78 @@ def upload_file_to_s3(file_content, file_name, content_type):
         Key=file_name,
         Body=file_content,
         ContentType=content_type or 'application/octet-stream',
-        ACL='public-read' # Certifique-se que o bucket permite leitura pública
+        ACL='public-read'
     )
     
-    # Construir a URL (Virtual Host Style para melhor compatibilidade com B2 S3)
-    # Formato: https://{bucketName}.s3.{region}.backblazeb2.com/{fileName}
     url = f"https://{S3_BUCKET_NAME}.s3.{S3_REGION}.backblazeb2.com/{file_name}"
     return url
+
+def is_s3_configured():
+    """Verifica se as variáveis do S3/Backblaze B2 estão devidamente preenchidas."""
+    return bool(S3_ENDPOINT_URL and S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY and S3_BUCKET_NAME)
+
+def upload_backup_to_s3(file_bytes, file_name):
+    """Uploads a backup dump to the backups/ folder in Backblaze B2 S3."""
+    if not is_s3_configured():
+        return False
+    s3 = get_s3_client()
+    key = f"backups/{file_name}" if not file_name.startswith("backups/") else file_name
+    s3.put_object(
+        Bucket=S3_BUCKET_NAME,
+        Key=key,
+        Body=file_bytes,
+        ContentType='application/gzip'
+    )
+    return True
+
+def list_backups_from_s3():
+    """Lists all backup objects stored under backups/ in Backblaze B2 S3."""
+    if not is_s3_configured():
+        return []
+    s3 = get_s3_client()
+    try:
+        response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="backups/")
+        items = []
+        for obj in response.get('Contents', []):
+            key = obj['Key']
+            filename = key.replace("backups/", "")
+            if not filename:
+                continue
+            items.append({
+                "filename": filename,
+                "key": key,
+                "size_bytes": obj.get('Size', 0),
+                "last_modified": obj.get('LastModified').isoformat() if obj.get('LastModified') else None
+            })
+        items.sort(key=lambda x: x['last_modified'] or '', reverse=True)
+        return items
+    except Exception as e:
+        print(f"Erro ao listar backups do S3: {e}")
+        return []
+
+def download_backup_from_s3(file_name):
+    """Downloads object bytes from Backblaze B2 S3."""
+    if not is_s3_configured():
+        return None
+    s3 = get_s3_client()
+    key = f"backups/{file_name}" if not file_name.startswith("backups/") else file_name
+    try:
+        obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=key)
+        return obj['Body'].read()
+    except Exception as e:
+        print(f"Erro ao baixar backup {file_name} do S3: {e}")
+        return None
+
+def delete_backup_from_s3(file_name):
+    """Deletes backup object from Backblaze B2 S3."""
+    if not is_s3_configured():
+        return False
+    s3 = get_s3_client()
+    key = f"backups/{file_name}" if not file_name.startswith("backups/") else file_name
+    try:
+        s3.delete_object(Bucket=S3_BUCKET_NAME, Key=key)
+        return True
+    except Exception as e:
+        print(f"Erro ao deletar backup {file_name} do S3: {e}")
+        return False
+

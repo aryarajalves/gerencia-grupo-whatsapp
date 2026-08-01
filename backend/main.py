@@ -13,7 +13,7 @@ from core.logger import logger, setup_uvicorn_logging
 from database import SessionLocal
 
 # Router imports
-from routers import users, groups, messages, logs, webhooks, dashboard, media, config, contacts, group_sets, redirect, capture, clients
+from routers import users, groups, messages, logs, webhooks, dashboard, media, config, contacts, group_sets, redirect, capture, clients, backup
 
 # Configuração Rate Limiting (Redis)
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
@@ -137,3 +137,4 @@ app.include_router(group_sets.router)
 app.include_router(redirect.router)
 app.include_router(capture.router)
 app.include_router(clients.router)
+app.include_router(backup.router, prefix="/backup", tags=["backup"])

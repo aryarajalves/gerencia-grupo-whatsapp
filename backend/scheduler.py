@@ -176,6 +176,37 @@ def job_atualizar_contatos():
     finally:
         db.close()
 
+def job_backup_automatico():
+    from services import backup_service
+    db = SessionLocal()
+    try:
+        info = backup_service.get_backup_info(db)
+        if not info["agendamento_ativo"]:
+            return
+
+        agora = datetime.now(BR_TZ)
+        last_run_str = backup_service.get_config_val(db, "BACKUP_LAST_RUN", None)
+        interval_hours = info["interval_hours"]
+
+        should_run = False
+        if not last_run_str:
+            should_run = True
+        else:
+            try:
+                dt_last = datetime.fromisoformat(last_run_str)
+                if (agora - dt_last) >= timedelta(hours=interval_hours):
+                    should_run = True
+            except Exception:
+                should_run = True
+
+        if should_run:
+            print(f"[{agora.strftime('%H:%M:%S')}] Executando backup automático agendado do banco de dados...")
+            backup_service.execute_backup(db)
+    except Exception as e:
+        print(f"Erro no backup automático: {e}")
+    finally:
+        db.close()
+
 def iniciar_agendador():
     scheduler = BackgroundScheduler()
     # Verificação de mensagens
@@ -185,6 +216,8 @@ def iniciar_agendador():
     # Status e Contatos
     scheduler.add_job(job_verificar_status, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ))
     scheduler.add_job(job_atualizar_contatos, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ))
+    # Backup automático a cada 15 minutos checa se venceu o intervalo
+    scheduler.add_job(job_backup_automatico, 'interval', minutes=15, next_run_time=datetime.now(BR_TZ))
     
     scheduler.start()
     return scheduler

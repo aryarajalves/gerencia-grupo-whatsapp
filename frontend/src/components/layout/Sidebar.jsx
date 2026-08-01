@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Users, List, MessageSquare, Zap, History, Settings, LogOut, ChevronDown, PlusCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, List, MessageSquare, Zap, History, Settings, LogOut, ChevronDown, PlusCircle, CheckCircle2, Trash2, Database } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'react-hot-toast';
@@ -64,6 +64,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, conjuntosAlertaCount = 0, 
       title: 'ADMINISTRAÇÃO',
       items: [
         { id: 'usuarios',  label: 'Gestão de Usuários', icon: Users, adminOnly: true },
+        { id: 'backup',    label: 'Backup Banco', icon: Database, adminOnly: true },
       ]
     }
   ];

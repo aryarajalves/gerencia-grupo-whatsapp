@@ -24,6 +24,7 @@ import Chat from './pages/Chat';
 import Register from './pages/Register';
 import SetupProfile from './pages/SetupProfile';
 import FullSet from './pages/FullSet';
+import Backup from './pages/Backup';
 
 import './App.css';
 
@@ -140,6 +141,7 @@ function App() {
     switch (activeTab) {
       case 'dashboard': return <Dashboard stats={stats} grupos={grupos} waStatus={waStatus} onRefresh={fetchData} />;
       case 'usuarios':  return <Users openConfirm={openConfirm} />;
+      case 'backup':    return <Backup openConfirm={openConfirm} />;
       case 'grupos':    return <GerenciarGrupos grupos={grupos} setGrupos={setGrupos} mensagens={mensagens} onRefresh={fetchData} openConfirm={openConfirm} />;
       case 'agendar':   return <AgendarMensagens mensagens={mensagens} grupos={grupos} waStatus={waStatus} onRefresh={fetchData} openConfirm={openConfirm} />;
       case 'captura':   return <CapturaMensagens openConfirm={openConfirm} />;

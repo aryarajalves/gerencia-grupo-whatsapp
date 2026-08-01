@@ -156,7 +156,7 @@ Mapeamento dos endpoints do projeto:
 
 **[RESPONDIDO] Integrações externas:** Não há integração com Hotmart, Kiwify ou outras plataformas além do webhook padrão.
 
-**[RESPONDIDO] Backup do banco:** Ainda não implementado. Um arquivo `DATABASE_SCHEMA.md` foi criado na raiz do projeto documentando todas as tabelas e colunas para facilitar a criação de backups automáticos. Ver `MELHORIAS.md` para implementação.
+**[RESPONDIDO] Backup do banco:** Implementado na aba **Backup Banco** em **ADMINISTRAÇÃO**. Suporta backups manuais e agendamento automático com envio direto para o armazenamento Backblaze B2 S3, retenção configurável e upload/restauração de dumps do PostgreSQL.
 
 **[RESPONDIDO] SLA de entrega:** Não há SLA prometido aos clientes.
 

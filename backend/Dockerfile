@@ -4,10 +4,11 @@ FROM python:3.11-slim
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Instala dependências do sistema necessárias para psycopg2 e outras libs
+# Instala dependências do sistema necessárias para psycopg2, pg_dump e outras libs
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
+    postgresql-client \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
