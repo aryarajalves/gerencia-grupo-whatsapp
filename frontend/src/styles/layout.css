@@ -1,0 +1,110 @@
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(20px);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 10px 0 30px rgba(0,0,0,0.2);
+}
+
+.sidebar nav {
+  flex: 1;
+  overflow-y: auto;
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-section-title {
+  padding: 0 1.25rem;
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.6;
+}
+
+.nav-item {
+  padding: 0.8rem 1.25rem;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  border: 1px solid transparent;
+  position: relative;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  transform: none !important;
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--accent-rgb), 0.08));
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  border-left: 3px solid var(--primary);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px var(--primary);
+}
+
+.sidebar-user-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s;
+}
+
+.sidebar-user-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(var(--primary-rgb), 0.3);
+}
+
+.main-content {
+  flex: 1;
+  padding: 2.25rem;
+  overflow-y: auto;
+}
+
+h1 {
+  margin-bottom: 2.5rem;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}

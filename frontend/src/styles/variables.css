@@ -1,0 +1,33 @@
+:root {
+  --primary: #2563eb; /* Azul Vibrante */
+  --primary-rgb: 37, 99, 235;
+  --accent: #7c3aed; /* Roxo Neon */
+  --accent-rgb: 124, 58, 237;
+  
+  --bg-dark: #1a1c23; /* Cinza Ardósia mais claro */
+  --bg-card: #242731; /* Card com mais destaque */
+  --bg-sidebar: #111317; /* Sidebar mais profunda para contraste */
+  --bg-input: #242731;
+  
+  --text-main: #f3f4f6;
+  --text-dim: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --neon-border: rgba(99, 102, 241, 0.4);
+  
+  --glass: rgba(255, 255, 255, 0.02);
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
+  /* Glassmorphism Variants */
+  --glass-morphism: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+  /* Modal Scale Variables */
+  --modal-padding: 1.5rem;
+  --modal-header-padding: 1.25rem 1.5rem;
+  --modal-gap: 1.25rem;
+  --modal-radius: 24px;
+  --input-height: 48px;
+}

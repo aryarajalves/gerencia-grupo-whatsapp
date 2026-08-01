@@ -1,0 +1,146 @@
+name: gerencia-grupo-whatsapp
+version: "3.7"
+
+services:
+
+  # =============================================================
+  # BACKEND - FastAPI (API REST)
+  # =============================================================
+  backend:
+    image: aryarajalves/gerenciador-zap-grupo:api-1.3.0
+    environment:
+
+      # --- Banco de Dados ---
+      # String de conexão com o PostgreSQL (formato: postgresql://user:senha@host:porta/db)
+      - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
+
+      # --- Armazenamento de Mídia (Backblaze S3) ---
+      # ID da chave de acesso (Key ID) da sua conta Backblaze B2
+      - S3_ACCESS_KEY_ID=0047daba280ace40000000016
+      # Chave secreta de acesso correspondente ao Key ID acima
+      - S3_SECRET_ACCESS_KEY=K004/CnTC2q6BMPl00avkBM/9ItRC2w
+      # Nome do bucket onde as mídias serão armazenadas
+      - S3_BUCKET_NAME=zap-group
+      # URL do endpoint S3 do Backblaze (varia por região)
+      - S3_ENDPOINT_URL=https://s3.us-west-004.backblazeb2.com
+      # Região do bucket Backblaze (ex: us-west-004)
+      - S3_REGION=us-west-004
+
+      # --- Redis (Rate Limiting) ---
+      # URL de conexão com o Redis. Use o nome do container na mesma rede Docker.
+      # Formato: redis://host:6379 ou redis://:senha@host:6379
+      - REDIS_URL=redis://redis:6379
+
+      # --- Segurança da API ---
+      # Chave secreta usada para assinar os tokens JWT.
+      # ⚠️  OBRIGATÓRIO: mínimo 32 caracteres. O servidor recusará subir se for menor!
+      # Gere uma chave segura com: python -c "import secrets; print(secrets.token_hex(32))"
+      - API_SECRET=8f8e7d6c5b4a39281726354455667788
+      # Origens permitidas para CORS (separadas por vírgula). Apenas esses domínios podem chamar a API pelo navegador.
+      - ALLOWED_ORIGINS=https://planilhasalesforce.agency10x.com.br
+      # Hosts confiáveis para o servidor (separados por vírgula). Evita ataques de Host Header Injection.
+      - ALLOWED_HOSTS=planilhasalesforce.agency10x.com.br,api.planilhasalesforce.agency10x.com.br
+
+      # --- Super Admin (Primeiro Acesso) ---
+      # Email do administrador principal. Usado para criar a conta inicial ao subir o sistema.
+      - SUPER_ADMIN_EMAIL=aryarajmarketing@gmail.com
+      # Senha do administrador principal. Altere após o primeiro login!
+      - SUPER_ADMIN_PASSWORD=Admin123!@#
+
+      # --- Fuso Horário de Brasília ---
+      - TZ=America/Sao_Paulo
+
+      # --- Desativar Agendador na API (Executado no container worker) ---
+      - DISABLE_SCHEDULER=true
+
+    networks:
+      - network_swarm_public
+    volumes:
+      # Persistência de dados locais (logs, arquivos temporários, etc.)
+      - app_data:/app/data
+
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.backend.rule=Host(`api.planilhasalesforce.agency10x.com.br`)
+        - traefik.http.routers.backend.entrypoints=websecure
+        - traefik.http.routers.backend.tls.certresolver=letsencryptresolver
+        - traefik.http.services.backend.loadbalancer.server.port=8000
+
+  # =============================================================
+  # WORKER - Agendador de Tarefas (Disparos e Sincronização)
+  # =============================================================
+  worker:
+    image: aryarajalves/gerenciador-zap-grupo:api-1.3.0
+    command: python worker.py
+    environment:
+      - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
+      - S3_ACCESS_KEY_ID=0047daba280ace40000000016
+      - S3_SECRET_ACCESS_KEY=K004/CnTC2q6BMPl00avkBM/9ItRC2w
+      - S3_BUCKET_NAME=zap-group
+      - S3_ENDPOINT_URL=https://s3.us-west-004.backblazeb2.com
+      - S3_REGION=us-west-004
+      - REDIS_URL=redis://redis:6379
+      - API_SECRET=8f8e7d6c5b4a39281726354455667788
+      - TZ=America/Sao_Paulo
+    networks:
+      - network_swarm_public
+    volumes:
+      - app_data:/app/data
+
+  # =============================================================
+  # FRONTEND - React (Interface Web)
+  # =============================================================
+  frontend:
+    image: aryarajalves/gerenciador-zap-grupo:app-1.3.0
+    environment:
+
+      # --- Banco de Dados (referência, não usado diretamente pelo frontend em runtime) ---
+      - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
+
+      # --- Armazenamento de Mídia (Backblaze S3) ---
+      - S3_ACCESS_KEY_ID=0047daba280ace40000000016
+      - S3_SECRET_ACCESS_KEY=K004/CnTC2q6BMPl00avkBM/9ItRC2w
+      - S3_BUCKET_NAME=zap-group
+      - S3_ENDPOINT_URL=https://s3.us-west-004.backblazeb2.com
+      - S3_REGION=us-west-004
+
+      # --- Redis ---
+      # URL de conexão com o Redis. Deve apontar para o mesmo Redis do backend.
+      - REDIS_URL=redis://redis:6379
+
+      # --- Segurança da API ---
+      - API_SECRET=MinhaSenhaSuperSegura123
+      - ALLOWED_ORIGINS=https://planilhasalesforce.agency10x.com.br
+      - ALLOWED_HOSTS=planilhasalesforce.agency10x.com.br,api.planilhasalesforce.agency10x.com.br
+
+      # --- Super Admin ---
+      - SUPER_ADMIN_EMAIL=aryarajmarketing@gmail.com
+      - SUPER_ADMIN_PASSWORD=Admin123!@#
+
+      # --- Configuração do Frontend (VITE) ---
+      # URL base da API do backend. Injetada em tempo de build no React.
+      - VITE_API_URL=https://api.planilhasalesforce.agency10x.com.br
+      # Chave de acesso da API. Deve ser IDÊNTICA ao API_SECRET do backend.
+      # ⚠️  OBRIGATÓRIO: mínimo 32 caracteres.
+      - VITE_API_SECRET=8f8e7d6c5b4a39281726354455667788
+
+    networks:
+      - network_swarm_public
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.frontend.rule=Host(`planilhasalesforce.agency10x.com.br`)
+        - traefik.http.routers.frontend.entrypoints=websecure
+        - traefik.http.routers.frontend.priority=1
+        - traefik.http.routers.frontend.tls.certresolver=letsencryptresolver
+        - traefik.http.services.frontend.loadbalancer.server.port=80
+
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true
+
+volumes:
+  app_data:
+    name: projeto_whatsapp_data

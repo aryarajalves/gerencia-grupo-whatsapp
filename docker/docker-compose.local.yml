@@ -1,0 +1,103 @@
+name: gerencia-grupo-whatsapp
+
+services:
+  # Banco de Dados Postgres (Referência N8N)
+  postgres:
+    image: postgres:13
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=35cb19b8-13cd-4f02-af3e-abdcdd373ae5
+      - POSTGRES_DB=zapgroup
+      - TZ=America/Sao_Paulo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - network_swarm_public
+    ports:
+      - "5432:5432"
+
+  # Redis para a Fila (Referência N8N)
+  redis:
+    image: redis:7-alpine
+    hostname: redis
+    networks:
+      - network_swarm_public
+    ports:
+      - "6379:6379"
+
+  # Backend FastAPI
+  backend:
+    build: ../backend
+    env_file:
+      - ../backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
+      - DISABLE_SCHEDULER=true
+      - TZ=America/Sao_Paulo
+    depends_on:
+      - postgres
+
+    volumes:
+      - ../backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - network_swarm_public
+    ports:
+      - "8000:8000"
+
+  # Worker (Agendador de Tarefas / Disparos)
+  worker:
+    build: ../backend
+    env_file:
+      - ../backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
+      - TZ=America/Sao_Paulo
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ../backend:/app
+    command: python worker.py
+    networks:
+      - network_swarm_public
+
+  # Frontend React
+  frontend:
+    build:
+      context: ../frontend
+      target: build-stage
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_API_SECRET=8f8e7d6c5b4a39281726354455667788
+    depends_on:
+      - backend
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+    networks:
+      - network_swarm_public
+
+  # Túnel Cloudflare para acesso externo (Webhook)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token eyJhIjoiMTA1NmViNDE2MDI3MWYzYTU2YWFmMDk0Y2E0YzRmOTkiLCJ0IjoiODYxMWYzMjItNzY0Yi00MGU2LTg4MWEtYTU1ZTg3OTBlNzU3IiwicyI6Ik1qTm1NR1l4TUdVdE1EWTRaUzAwTjJJM0xUbGhOakF0TmpFNU5HRTFOV1V4TWpsaCJ9
+    restart: always
+    networks:
+      - network_swarm_public
+    depends_on:
+      - backend
+
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true
+
+volumes:
+  postgres_data:
+    name: projeto-gerenciadordegrupodowhatsapp_postgres_data
+    external: true

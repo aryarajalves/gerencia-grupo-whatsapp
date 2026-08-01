@@ -1,0 +1,24 @@
+fastapi==0.109.0 # Framework web principal para construir a API
+uvicorn==0.27.0 # Servidor ASGI para rodar o FastAPI
+sqlalchemy==2.0.25 # ORM para mapeamento e manipulação do banco de dados
+psycopg2-binary==2.9.9 # Driver para conexão com o PostgreSQL
+pydantic==2.5.3 # Validação de dados e definição de esquemas
+apscheduler==3.10.4 # Agendador de tarefas em segundo plano (disparo de mensagens)
+httpx==0.26.0 # Cliente HTTP para enviar os Webhooks para o N8N
+python-dotenv==1.0.1 # Carregar variáveis de ambiente do arquivo .env
+boto3==1.34.34 # SDK da AWS (usado para Backblaze S3) para upload de mídias
+python-multipart==0.0.9 # Necessário para processar uploads de arquivos no FastAPI
+pytz==2024.1 # Suporte a fuso horário para horário de Brasília
+slowapi==0.1.9 # Implementação de Rate Limiting para FastAPI
+redis==5.0.1 # Cliente Redis para armazenamento do Rate Limiting
+pytest==8.0.0
+# Suporte a testes assíncronos (async/await) no pytest
+pytest-asyncio==0.23.5
+httpx==0.26.0
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+
+# Biblioteca para mock de requisições HTTP do httpx em testes
+respx==0.20.2
+
