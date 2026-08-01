@@ -17,6 +17,8 @@ const GroupsTable = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos'); // 'todos' | 'ativos' | 'inativos' | 'alerta'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   const getGroupInitials = (name) => name ? name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : '?';
 
@@ -32,6 +34,11 @@ const GroupsTable = ({
     if (statusFilter === 'alerta') return g.ativo && g.total_mensagens === 0;
     return true;
   });
+
+  const totalPages = Math.ceil(gruposFiltrados.length / itemsPerPage) || 1;
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const gruposPaginados = gruposFiltrados.slice(startIndex, startIndex + itemsPerPage);
 
   const countAtivos = grupos.filter(g => g.ativo).length;
   const countInativos = grupos.filter(g => !g.ativo).length;
@@ -130,7 +137,7 @@ const GroupsTable = ({
           </button>
           {countAlerta > 0 && (
             <button
-              onClick={() => setStatusFilter('alerta')}
+              onClick={() => { setStatusFilter('alerta'); setCurrentPage(1); }}
               style={{
                 padding: '5px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600,
                 background: statusFilter === 'alerta' ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.08)',
@@ -139,10 +146,34 @@ const GroupsTable = ({
                 cursor: 'pointer', transition: 'all 0.2s'
               }}
             >
-              Sem Conteúdo ({countAlerta})
+              Sem Mensagem Ativada ({countAlerta})
             </button>
           )}
+
+          {/* Seletor Exibir por Página */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-dim)', marginLeft: '8px' }}>
+            <span>Exibir:</span>
+            <select
+              value={itemsPerPage}
+              onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              style={{
+                padding: '4px 8px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '0.78rem',
+                cursor: 'pointer'
+              }}
+            >
+              <option value={20} style={{ background: '#161822' }}>20 / pág</option>
+              <option value={50} style={{ background: '#161822' }}>50 / pág</option>
+              <option value={100} style={{ background: '#161822' }}>100 / pág</option>
+              <option value={200} style={{ background: '#161822' }}>200 / pág</option>
+            </select>
+          </div>
         </div>
+
       </div>
 
       {gruposFiltrados.length === 0 ? (
@@ -165,7 +196,7 @@ const GroupsTable = ({
               </tr>
             </thead>
             <tbody>
-              {gruposFiltrados.map((g, idx) => (
+              {gruposPaginados.map((g, idx) => (
                 <tr key={g.id} style={{ borderBottom: '1px solid var(--border)', opacity: g.ativo ? 1 : 0.45, background: editingId === g.id ? 'rgba(37,99,235,0.05)' : idx % 2 !== 0 ? 'rgba(255,255,255,0.012)' : 'transparent' }}>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -274,8 +305,67 @@ const GroupsTable = ({
           </table>
         </div>
       )}
+
+      {/* Rodapé de Paginação */}
+      {gruposFiltrados.length > 0 && (
+        <div style={{
+          padding: '12px 20px',
+          borderTop: '1px solid var(--border)',
+          background: 'rgba(0,0,0,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          fontSize: '0.8rem',
+          color: 'var(--text-dim)'
+        }}>
+          <div>
+            Exibindo <strong style={{ color: '#fff' }}>{Math.min(startIndex + 1, gruposFiltrados.length)}</strong> a <strong style={{ color: '#fff' }}>{Math.min(startIndex + itemsPerPage, gruposFiltrados.length)}</strong> de <strong style={{ color: '#fff' }}>{gruposFiltrados.length}</strong> grupos
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              disabled={safePage <= 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              className="btn btn-secondary"
+              style={{
+                padding: '4px 12px',
+                height: '32px',
+                fontSize: '0.78rem',
+                borderRadius: '8px',
+                opacity: safePage <= 1 ? 0.4 : 1,
+                cursor: safePage <= 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Anterior
+            </button>
+
+            <span style={{ fontSize: '0.8rem', padding: '0 4px', color: '#fff', fontWeight: 600 }}>
+              Página {safePage} de {totalPages}
+            </span>
+
+            <button
+              disabled={safePage >= totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              className="btn btn-secondary"
+              style={{
+                padding: '4px 12px',
+                height: '32px',
+                fontSize: '0.78rem',
+                borderRadius: '8px',
+                opacity: safePage >= totalPages ? 0.4 : 1,
+                cursor: safePage >= totalPages ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default GroupsTable;
+
