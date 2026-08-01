@@ -20,9 +20,32 @@ def listar_grupos(db: Session = Depends(get_db)):
     grupos = db.query(models.GrupoWhatsApp).filter(
         or_(models.GrupoWhatsApp.cliente_id == cid, models.GrupoWhatsApp.cliente_id.is_(None))
     ).order_by(models.GrupoWhatsApp.nome, models.GrupoWhatsApp.id).all()
+    
     for g in grupos:
-        g.total_mensagens = db.query(models.GrupoMensagem).filter_by(grupo_id=g.id).count()
+        ids_associados = db.query(models.GrupoMensagem.mensagem_id).filter_by(grupo_id=g.id).all()
+        ids_associados = [r[0] for r in ids_associados]
+        g.total_mensagens = len(ids_associados)
+
+        if g.ativo and g.dia_lancamento_atual > 0:
+            if ids_associados:
+                count_hoje = db.query(models.MensagemDisparada).filter(
+                    models.MensagemDisparada.dia_do_lancamento == g.dia_lancamento_atual,
+                    models.MensagemDisparada.ativo == True,
+                    models.MensagemDisparada.id.in_(ids_associados)
+                ).count()
+            else:
+                count_hoje = db.query(models.MensagemDisparada).filter(
+                    models.MensagemDisparada.dia_do_lancamento == g.dia_lancamento_atual,
+                    models.MensagemDisparada.ativo == True
+                ).count()
+            g.total_disparos_hoje = count_hoje
+            g.tem_disparo_hoje = (count_hoje > 0)
+        else:
+            g.total_disparos_hoje = 0
+            g.tem_disparo_hoje = False
+
     return grupos
+
 
 @router.post("/grupos/", response_model=schemas.GrupoWhatsApp, dependencies=[Depends(security.get_api_key)])
 def criar_grupo(grupo: schemas.GrupoWhatsAppCreate, db: Session = Depends(get_db)):

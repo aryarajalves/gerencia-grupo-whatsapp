@@ -25,6 +25,8 @@ const GroupsTable = ({
 
   const getGroupInitials = (name) => name ? name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : '?';
 
+  const isDisparoHoje = (g) => Boolean(g.tem_disparo_hoje !== undefined ? g.tem_disparo_hoje : (g.ativo && g.dia_lancamento_atual > 0 && g.total_mensagens > 0));
+
   const activeAdvancedFiltersCount = (cicloFilter !== 'todos' ? 1 : 0) + (extracaoFilter !== 'todos' ? 1 : 0);
 
   // Filtrar grupos por texto, status, ciclo e extração
@@ -34,6 +36,7 @@ const GroupsTable = ({
     
     if (!matchesSearch) return false;
 
+    if (statusFilter === 'disparo_hoje' && !isDisparoHoje(g)) return false;
     if (statusFilter === 'ativos' && !g.ativo) return false;
     if (statusFilter === 'inativos' && g.ativo) return false;
     if (statusFilter === 'alerta' && (!g.ativo || g.total_mensagens !== 0)) return false;
@@ -53,9 +56,11 @@ const GroupsTable = ({
   const startIndex = (safePage - 1) * itemsPerPage;
   const gruposPaginados = gruposFiltrados.slice(startIndex, startIndex + itemsPerPage);
 
+  const countDisparoHoje = grupos.filter(isDisparoHoje).length;
   const countAtivos = grupos.filter(g => g.ativo).length;
   const countInativos = grupos.filter(g => !g.ativo).length;
   const countAlerta = grupos.filter(g => g.ativo && g.total_mensagens === 0).length;
+
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -119,7 +124,9 @@ const GroupsTable = ({
             onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
             style={{
               padding: '6px 12px',
-              background: statusFilter === 'alerta' 
+              background: statusFilter === 'disparo_hoje'
+                ? 'rgba(56, 189, 248, 0.15)'
+                : statusFilter === 'alerta' 
                 ? 'rgba(239, 68, 68, 0.15)' 
                 : statusFilter === 'ativos'
                 ? 'rgba(34, 197, 94, 0.15)'
@@ -127,7 +134,9 @@ const GroupsTable = ({
                 ? 'rgba(245, 158, 11, 0.15)'
                 : 'rgba(255, 255, 255, 0.05)',
               border: `1px solid ${
-                statusFilter === 'alerta' 
+                statusFilter === 'disparo_hoje'
+                  ? 'rgba(56, 189, 248, 0.4)'
+                  : statusFilter === 'alerta' 
                   ? 'rgba(239, 68, 68, 0.4)' 
                   : statusFilter === 'ativos'
                   ? 'rgba(34, 197, 94, 0.4)'
@@ -136,7 +145,9 @@ const GroupsTable = ({
                   : 'rgba(255, 255, 255, 0.12)'
               }`,
               borderRadius: '8px',
-              color: statusFilter === 'alerta' 
+              color: statusFilter === 'disparo_hoje'
+                ? '#38bdf8'
+                : statusFilter === 'alerta' 
                 ? '#f87171' 
                 : statusFilter === 'ativos'
                 ? '#4ade80'
@@ -153,6 +164,9 @@ const GroupsTable = ({
             <option value="todos" style={{ background: '#161822', color: '#fff' }}>
               Todos os Grupos ({grupos.length})
             </option>
+            <option value="disparo_hoje" style={{ background: '#161822', color: '#38bdf8' }}>
+              ⚡ Com Disparo Hoje ({countDisparoHoje})
+            </option>
             <option value="ativos" style={{ background: '#161822', color: '#4ade80' }}>
               Ativos ({countAtivos})
             </option>
@@ -165,7 +179,30 @@ const GroupsTable = ({
               </option>
             )}
           </select>
+
+          {/* Botão Atalho Rápido: Com Disparo Hoje */}
+          <button
+            type="button"
+            onClick={() => {
+              setStatusFilter(prev => prev === 'disparo_hoje' ? 'todos' : 'disparo_hoje');
+              setCurrentPage(1);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700,
+              background: statusFilter === 'disparo_hoje' 
+                ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.2))' 
+                : 'rgba(255, 255, 255, 0.04)',
+              color: statusFilter === 'disparo_hoje' ? '#38bdf8' : 'var(--text-dim)',
+              border: `1px solid ${statusFilter === 'disparo_hoje' ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.1)'}`,
+              cursor: 'pointer', transition: 'all 0.2s',
+              boxShadow: statusFilter === 'disparo_hoje' ? '0 0 12px rgba(56, 189, 248, 0.25)' : 'none'
+            }}
+          >
+            ⚡ Com Disparo Hoje ({countDisparoHoje})
+          </button>
         </div>
+
 
 
           {/* Seletor Exibir por Página */}
@@ -427,11 +464,23 @@ const GroupsTable = ({
                   </td>
                   <td style={{ padding: '14px 20px' }}>
                     {g.dia_lancamento_atual > 0 ? (
-                      <span className="badge-success">DIA {g.dia_lancamento_atual.toString().padStart(2,'0')}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span className="badge-success" style={{ width: 'fit-content' }}>DIA {g.dia_lancamento_atual.toString().padStart(2,'0')}</span>
+                        {isDisparoHoje(g) ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.65rem', fontWeight: 800, color: '#38bdf8', background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.35)', borderRadius: '6px', padding: '2px 6px', width: 'fit-content' }}>
+                            ⚡ DISPARO HOJE
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                            Sem disparo hoje
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="badge-dim"><Clock size={12} /> Aguardando</span>
                     )}
                   </td>
+
                   <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end' }}>
                       {extrairContatosAgora && (

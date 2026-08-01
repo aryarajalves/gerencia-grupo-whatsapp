@@ -46,8 +46,11 @@ class GrupoWhatsAppCreate(GrupoWhatsAppBase):
 class GrupoWhatsApp(GrupoWhatsAppBase):
     id: uuid.UUID
     total_mensagens: int = 0
+    tem_disparo_hoje: Optional[bool] = False
+    total_disparos_hoje: Optional[int] = 0
 
     class Config:
+
         from_attributes = True
 
 class MensagemDisparadaBase(BaseModel):
