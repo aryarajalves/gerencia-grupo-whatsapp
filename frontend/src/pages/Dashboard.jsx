@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard, Users, Send, TrendingUp, MessageSquare,
+  Users, Send, TrendingUp, MessageSquare,
   Clock, CheckCircle2, Layers, History, Image, Video,
-  Mic, FileText, LayoutGrid, Check, Copy, Edit3, AlertTriangle, X
+  Mic, FileText, LayoutGrid, Check, Copy, Edit3
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCopy } from '../hooks/useCopy';
 import axiosInstance from '../services/api';
 import { useWaStatus } from '../contexts/WaStatusContext';
+import DashboardHeader from '../components/Dashboard/DashboardHeader';
+import DashboardWarnings from '../components/Dashboard/DashboardWarnings';
 
 const TIPO_CONFIG = {
   texto:      { label: 'Texto',       icon: MessageSquare, color: '#60a5fa' },
@@ -19,12 +21,11 @@ const TIPO_CONFIG = {
   enquete:    { label: 'Enquete',     icon: LayoutGrid,    color: '#22d3ee' }
 };
 
-const Dashboard = ({ stats = {}, onRefresh }) => {
+const Dashboard = ({ stats = {}, grupos = [], onRefresh }) => {
   const { waStatus } = useWaStatus();
   const {
     total_grupos_ativos = 0,
     total_grupos_lancamento = 0,
-    total_grupos_encerrados = 0,
     total_mensagens = 0,
     disparos_hoje = 0,
     taxa_sucesso = 0,
@@ -37,6 +38,8 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
   } = stats;
 
   const [dispensando, setDispensando] = useState(null);
+  const [selectedGroupJid, setSelectedGroupJid] = useState('TODOS');
+  const [expanderCicloMap, setExpanderCicloMap] = useState({});
   const { copiedId, handleCopy } = useCopy();
 
   const handleDispensar = async (id) => {
@@ -55,10 +58,38 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
   const now = new Date();
   const dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  const selectedGroupObj = grupos.find(g => g.id_do_grupo === selectedGroupJid);
+  const selectedGroupName = selectedGroupObj ? selectedGroupObj.nome : null;
+
+  // Filtrar Próximos Disparos por grupo selecionado
+  const disparosFiltrados = selectedGroupJid === 'TODOS'
+    ? proximos_disparos
+    : proximos_disparos.filter(d => d.grupo === selectedGroupName);
+
+  // Filtrar Ciclo por dia
+  const cicloFiltrado = selectedGroupJid === 'TODOS'
+    ? grupos_por_dia
+    : grupos_por_dia.map(item => ({
+        dia: item.dia,
+        grupos: item.grupos.filter(nome => nome === selectedGroupName)
+      })).filter(item => item.grupos.length > 0);
+
+  // Filtrar Último Disparo
+  const ultimoDisparoFiltrado = selectedGroupJid === 'TODOS'
+    ? ultimo_disparo
+    : (ultimo_disparo && ultimo_disparo.grupo_nome === selectedGroupName ? ultimo_disparo : null);
+
+  const toggleExpandirCiclo = (dia) => {
+    setExpanderCicloMap(prev => ({ ...prev, [dia]: !prev[dia] }));
+  };
+
   const statCards = [
     {
-      label: 'Grupos Ativos', value: total_grupos_ativos,
-      sub: total_grupos_lancamento > 0 ? `${total_grupos_lancamento} em ciclo de lançamento` : 'Nenhum grupo em ciclo hoje',
+      label: selectedGroupJid === 'TODOS' ? 'Grupos Ativos' : 'Status do Grupo',
+      value: selectedGroupJid === 'TODOS' ? total_grupos_ativos : (selectedGroupObj?.ativo ? 'Ativo' : 'Inativo'),
+      sub: selectedGroupJid === 'TODOS'
+        ? (total_grupos_lancamento > 0 ? `${total_grupos_lancamento} em ciclo de lançamento` : 'Nenhum grupo em ciclo hoje')
+        : (selectedGroupObj?.dia_lancamento_atual > 0 ? `Dia ${selectedGroupObj.dia_lancamento_atual} do lançamento` : 'Ciclo encerrado / não iniciado'),
       icon: Users, color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)',
       accent: 'rgba(96,165,250,0.06)'
     },
@@ -84,135 +115,28 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
 
   return (
     <div className="fade-in">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(37,99,235,0.25), rgba(124,58,237,0.25))', border: '1px solid rgba(37,99,235,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <LayoutDashboard size={19} style={{ color: 'var(--primary)' }} />
-            </div>
-            <h1 style={{ margin: 0 }}>Dashboard</h1>
-          </div>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.875rem', margin: 0, marginLeft: '52px', textTransform: 'capitalize' }}>{dateStr}</p>
-        </div>
+      {/* Header com Seletor Dropdown de Grupos */}
+      <DashboardHeader
+        dateStr={dateStr}
+        waStatus={waStatus}
+        grupos={grupos}
+        selectedGroupJid={selectedGroupJid}
+        setSelectedGroupJid={setSelectedGroupJid}
+      />
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px', 
-            background: waStatus.status === 'conectado' ? 'rgba(16,185,129,0.08)' : 'rgba(239, 68, 68, 0.08)', 
-            border: waStatus.status === 'conectado' ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(239, 68, 68, 0.2)' 
-          }}>
-            <div style={{ 
-              width: '7px', height: '7px', borderRadius: '50%', 
-              background: waStatus.status === 'conectado' ? '#10b981' : '#ef4444', 
-              boxShadow: waStatus.status === 'conectado' ? '0 0 8px #10b981' : '0 0 8px #ef4444', 
-              animation: 'pulse 2s infinite' 
-            }} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: waStatus.status === 'conectado' ? '#10b981' : '#ef4444' }}>
-              WhatsApp: {typeof waStatus.status === 'string' ? waStatus.status.toUpperCase() : 'DESCONHECIDO'}
-            </span>
-          </div>
+      {/* Avisos & Alertas Agrupados */}
+      <DashboardWarnings
+        falhas_definitivas={falhas_definitivas}
+        grupos_sem_mensagens={grupos_sem_mensagens}
+        conjuntos_quase_cheios={conjuntos_quase_cheios}
+        handleDispensar={handleDispensar}
+        dispensando={dispensando}
+        selectedGroupJid={selectedGroupJid}
+        setSelectedGroupJid={setSelectedGroupJid}
+        grupos={grupos}
+      />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981', animation: 'pulse 2s infinite' }} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#10b981' }}>Sistema Operacional</span>
-          </div>
-        </div>
-      </div>
-
-      {(falhas_definitivas.length > 0 || grupos_sem_mensagens.length > 0 || conjuntos_quase_cheios.length > 0) && (
-        <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {falhas_definitivas.map((falha) => (
-            <div key={falha.id} style={{
-              borderRadius: '12px', padding: '1rem 1.25rem',
-              background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.3)',
-              display: 'flex', alignItems: 'flex-start', gap: '12px'
-            }}>
-              <div style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertTriangle size={16} style={{ color: '#ef4444' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#ef4444', marginBottom: '2px' }}>
-                  Falha definitiva — {falha.grupo_nome}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-                  {falha.mensagem_corpo}
-                </div>
-                {falha.detalhes_erro && (
-                  <div style={{ fontSize: '0.72rem', color: '#f87171', background: 'rgba(239,68,68,0.08)', borderRadius: '6px', padding: '4px 8px', display: 'inline-block' }}>
-                    {falha.detalhes_erro}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => handleDispensar(falha.id)}
-                disabled={dispensando === falha.id}
-                style={{
-                  flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px',
-                  padding: '5px 12px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)',
-                  background: 'rgba(239,68,68,0.1)', color: '#ef4444',
-                  fontSize: '0.75rem', fontWeight: 600, cursor: dispensando === falha.id ? 'not-allowed' : 'pointer',
-                  opacity: dispensando === falha.id ? 0.6 : 1, transition: 'opacity 0.2s'
-                }}
-              >
-                <X size={12} />
-                {dispensando === falha.id ? 'Dispensando...' : 'Dispensar'}
-              </button>
-            </div>
-          ))}
-
-          {grupos_sem_mensagens.map((nome, i) => (
-            <div key={`sem-msg-${i}`} style={{
-              borderRadius: '12px', padding: '1rem 1.25rem',
-              background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.3)',
-              display: 'flex', alignItems: 'center', gap: '12px'
-            }}>
-              <div style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f59e0b' }}>
-                  Aviso de Configuração — {nome}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                  Este grupo não possui mensagens associadas. Nada será disparado para ele.
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {conjuntos_quase_cheios.map((c, i) => (
-            <div key={`conj-cheio-${i}`} style={{
-              borderRadius: '12px', padding: '1rem 1.25rem',
-              background: c.porcentagem >= 100 ? 'rgba(239,68,68,0.06)' : 'rgba(245,158,11,0.06)', 
-              border: c.porcentagem >= 100 ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(245,158,11,0.3)',
-              display: 'flex', alignItems: 'center', gap: '12px'
-            }}>
-              <div style={{ 
-                width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, 
-                background: c.porcentagem >= 100 ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)', 
-                border: c.porcentagem >= 100 ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(245,158,11,0.25)', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center' 
-              }}>
-                <AlertTriangle size={16} style={{ color: c.porcentagem >= 100 ? '#ef4444' : '#f59e0b' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: c.porcentagem >= 100 ? '#ef4444' : '#f59e0b' }}>
-                  {c.porcentagem >= 100 ? 'LOTAÇÃO MÁXIMA' : 'CAPACIDADE CRÍTICA'} — {c.nome}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span>O conjunto atingiu {c.porcentagem}% da capacidade ({c.leads}/{c.max} leads).</span>
-                  {c.porcentagem >= 100 && <span style={{ color: '#ef4444', fontWeight: 700 }}>REDIRECIONAMENTO ATIVO PARA PÁGINA DE ESGOTAMENTO.</span>}
-                </div>
-                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '8px' }}>
-                  <div style={{ width: `${Math.min(c.porcentagem, 100)}%`, height: '100%', background: c.porcentagem >= 100 ? '#ef4444' : '#f59e0b', borderRadius: '2px' }} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
+      {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
         {statCards.map((s, i) => {
           const Icon = s.icon;
@@ -243,7 +167,9 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
         })}
       </div>
 
+      {/* Main Grid: Disparos & Ciclo / Atividade */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.25rem' }}>
+        {/* Card: Próximos Disparos */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.015)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -252,35 +178,35 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
               </div>
               <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Próximos Disparos de Hoje</h3>
             </div>
-            {proximos_disparos.length > 0 && (
+            {disparosFiltrados.length > 0 && (
               <span style={{ padding: '3px 10px', borderRadius: '20px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700 }}>
-                {proximos_disparos.length} agendado(s)
+                {disparosFiltrados.length} agendado(s)
               </span>
             )}
           </div>
 
           <div style={{ padding: '1rem 1.5rem' }}>
-            {proximos_disparos.length > 0 ? (
+            {disparosFiltrados.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                {proximos_disparos.map((d, i) => {
+                {disparosFiltrados.map((d, i) => {
                   const cfg = TIPO_CONFIG[d.tipo] || TIPO_CONFIG.texto;
                   const Icon = cfg.icon;
-                  const isLast = i === proximos_disparos.length - 1;
+                  const isLast = i === disparosFiltrados.length - 1;
                   const currentId = `dash-${i}`;
                   return (
                     <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', paddingBottom: isLast ? 0 : '14px', position: 'relative' }}>
                       {!isLast && <div style={{ position: 'absolute', left: '19px', top: '38px', bottom: 0, width: '1px', background: 'var(--border)' }} />}
                       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                        <div style={{ 
-                          width: '38px', height: '38px', borderRadius: '10px', 
-                          background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)', 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' 
+                        <div style={{
+                          width: '38px', height: '38px', borderRadius: '10px',
+                          background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.25)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column'
                         }}>
                           <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{String(d.horario || '').slice(0,5)}</span>
                         </div>
                       </div>
-                      <div style={{ 
-                        flex: 1, minWidth: 0, padding: '8px 12px', borderRadius: '10px', 
+                      <div style={{
+                        flex: 1, minWidth: 0, padding: '8px 12px', borderRadius: '10px',
                         background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                       }}>
@@ -288,7 +214,7 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>{d.grupo}</span>
                             {d.link_convite && (
-                              <button 
+                              <button
                                 onClick={() => handleCopy(d.link_convite, currentId)}
                                 style={{ background: 'transparent', border: 'none', color: copiedId === currentId ? '#10b981' : 'var(--primary)', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.8 }}
                                 title={copiedId === currentId ? 'Copiado!' : 'Copiar Link'}
@@ -297,11 +223,11 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
                               </button>
                             )}
                           </div>
-                          <span style={{ 
-                            display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', 
-                            padding: '2px 8px', borderRadius: '10px', 
-                            background: `rgba(${cfg.color === '#60a5fa' ? '96,165,250' : '255,255,255'}, 0.08)`, 
-                            color: cfg.color, border: `1px solid ${cfg.color}33`, 
+                          <span style={{
+                            display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem',
+                            padding: '2px 8px', borderRadius: '10px',
+                            background: `rgba(${cfg.color === '#60a5fa' ? '96,165,250' : '255,255,255'}, 0.08)`,
+                            color: cfg.color, border: `1px solid ${cfg.color}33`,
                             whiteSpace: 'nowrap', flexShrink: 0,
                             textTransform: 'uppercase', fontWeight: 700
                           }}>
@@ -321,13 +247,15 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', margin: '0 auto 12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <CheckCircle2 size={22} style={{ color: '#10b981', opacity: 0.6 }} />
                 </div>
-                <p style={{ color: 'var(--text-dim)', fontSize: '0.875rem', margin: 0 }}>Sem disparos agendados para o restante do dia.</p>
+                <p style={{ color: 'var(--text-dim)', fontSize: '0.875rem', margin: 0 }}>Sem disparos agendados para este filtro.</p>
               </div>
             )}
           </div>
         </div>
 
+        {/* Sidebar: Ciclo & Última Atividade */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Ciclo Atual */}
           <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1 }}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.015)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -336,29 +264,56 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
               <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Ciclo Atual</h3>
             </div>
             <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {grupos_por_dia.length > 0 ? grupos_por_dia.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-                  <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
-                    DIA {item.dia}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{item.grupos.length} grupo(s)</span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {item.grupos.map((nome, j) => (
-                        <span key={j} style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(37,99,235,0.1)', color: 'var(--primary)', borderRadius: '6px', border: '1px solid rgba(37,99,235,0.15)' }}>{nome}</span>
-                      ))}
+              {cicloFiltrado.length > 0 ? cicloFiltrado.map((item, i) => {
+                const totalGruposDia = item.grupos.length;
+                const estaExpandido = expanderCicloMap[item.dia];
+                const gruposExibidos = (totalGruposDia > 8 && !estaExpandido) ? item.grupos.slice(0, 8) : item.grupos;
+                const ocultos = totalGruposDia - 8;
+
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+                    <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+                      DIA {item.dia}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{totalGruposDia} grupo(s)</span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {gruposExibidos.map((nome, j) => (
+                          <span key={j} style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(37,99,235,0.1)', color: 'var(--primary)', borderRadius: '6px', border: '1px solid rgba(37,99,235,0.15)' }}>
+                            {nome}
+                          </span>
+                        ))}
+                        {totalGruposDia > 8 && (
+                          <button
+                            onClick={() => toggleExpandirCiclo(item.dia)}
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '2px 8px',
+                              background: 'rgba(245,158,11,0.12)',
+                              color: '#f59e0b',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(245,158,11,0.25)',
+                              cursor: 'pointer',
+                              fontWeight: 700
+                            }}
+                          >
+                            {estaExpandido ? 'Ver Menos' : `+${ocultos} outros`}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )) : (
+                );
+              }) : (
                 <div style={{ textAlign: 'center', padding: '1.5rem 0', color: 'var(--text-dim)', fontSize: '0.85rem' }}>Nenhum grupo em ciclo ativo.</div>
               )}
             </div>
           </div>
 
+          {/* Última Atividade */}
           <div className="card" style={{ padding: 0, overflow: 'hidden', background: 'linear-gradient(135deg, rgba(37,99,235,0.04), rgba(124,58,237,0.06))', border: '1px solid rgba(37,99,235,0.18)' }}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(37,99,235,0.12)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -367,23 +322,23 @@ const Dashboard = ({ stats = {}, onRefresh }) => {
               <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Última Atividade</h3>
             </div>
             <div style={{ padding: '1rem 1.25rem' }}>
-              {ultimo_disparo ? (
+              {ultimoDisparoFiltrado ? (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                     <div style={{ width: '34px', height: '34px', borderRadius: '9px', flexShrink: 0, background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.25))', border: '1px solid rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 700, color: 'var(--accent)' }}>
-                      {ultimo_disparo.grupo_nome?.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase()}
+                      {ultimoDisparoFiltrado.grupo_nome?.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{ultimo_disparo.grupo_nome}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{ultimoDisparoFiltrado.grupo_nome}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <CheckCircle2 size={10} style={{ color: '#10b981' }} />
-                        Enviado às {ultimo_disparo.criado_em ? new Date(ultimo_disparo.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        Enviado às {ultimoDisparoFiltrado.criado_em ? new Date(ultimoDisparoFiltrado.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                       </div>
                     </div>
                   </div>
-                  {ultimo_disparo.mensagem_corpo && (
+                  {ultimoDisparoFiltrado.mensagem_corpo && (
                     <div style={{ fontSize: '0.8rem', padding: '8px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', borderLeft: '2px solid var(--primary)', color: 'var(--text-dim)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      "{ultimo_disparo.mensagem_corpo}"
+                      "{ultimoDisparoFiltrado.mensagem_corpo}"
                     </div>
                   )}
                 </div>
