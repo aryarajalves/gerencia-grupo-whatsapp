@@ -48,3 +48,15 @@ vi.mock('axios', () => ({
     },
   },
 }));
+
+// Mock react-hot-toast globalmente
+vi.mock('react-hot-toast', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+  },
+  Toaster: () => null,
+  default: { success: vi.fn(), error: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
+}));

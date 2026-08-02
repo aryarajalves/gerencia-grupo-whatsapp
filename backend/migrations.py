@@ -161,6 +161,11 @@ def sync_database():
             conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN ultima_extracao_em TIMESTAMP;"))
             conn.commit()
 
+        if 'tempo_digitando_segundos' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'tempo_digitando_segundos' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN tempo_digitando_segundos INTEGER DEFAULT 0;"))
+            conn.commit()
+
         if inspector.has_table('usuarios'):
             columns_users = [c['name'] for c in inspector.get_columns('usuarios')]
             if 'senha_hash' not in columns_users:

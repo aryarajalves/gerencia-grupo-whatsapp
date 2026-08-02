@@ -1,10 +1,29 @@
 import httpx
+import time
 from datetime import datetime
 import models
 from core.wapi import WAPI_BASE, ENDPOINT_MAP, get_wapi_headers, get_wapi_instance
 import pytz
+from core.logger import logger
 
 BR_TZ = pytz.timezone('America/Sao_Paulo')
+
+
+def simular_digitando(grupo_jid: str, instance_id: str, headers: dict, segundos: int):
+    """Envia presence 'composing' (digitando) por N segundos antes do disparo."""
+    if not segundos or segundos <= 0:
+        return
+    try:
+        presence_url = f"{WAPI_BASE}/chat/update-presence?instanceId={instance_id}"
+        payload_composing = {"phone": grupo_jid, "presence": "composing"}
+        httpx.post(presence_url, json=payload_composing, headers=headers, timeout=10)
+        logger.info(f"[DIGITANDO] '{grupo_jid}' simulando digitando por {segundos}s")
+        time.sleep(segundos)
+        payload_paused = {"phone": grupo_jid, "presence": "paused"}
+        httpx.post(presence_url, json=payload_paused, headers=headers, timeout=10)
+    except Exception as e:
+        logger.warning(f"[DIGITANDO] Falha ao simular presence para {grupo_jid}: {e}")
+
 
 def registrar_log(db, grupo_nome, mensagem_corpo, status, detalhes_erro=None, msg_id=None, tipo=None, cliente_id=None):
     log = models.LogDisparo(
@@ -129,7 +148,13 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
         optional_text = payload.pop("_optional_text", "")
 
     endpoint = ENDPOINT_MAP.get(tipo, "/message/send-text")
-    
+
+    # Simular "digitando..." antes de enviar (apenas para mensagens, não para ações de grupo)
+    TIPOS_SEM_DIGITANDO = {"status_grupo", "nome_grupo", "abrir_fechar_grupo"}
+    segundos_digitando = getattr(grupo, 'tempo_digitando_segundos', 0) or 0
+    if segundos_digitando > 0 and tipo not in TIPOS_SEM_DIGITANDO:
+        simular_digitando(grupo.id_do_grupo, instance_id, wapi_headers, segundos_digitando)
+
     if "{id}" in endpoint:
         path = endpoint.replace("{id}", instance_id)
         url = f"{WAPI_BASE}{path}"

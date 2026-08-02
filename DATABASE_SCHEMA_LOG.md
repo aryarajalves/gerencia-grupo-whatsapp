@@ -45,3 +45,13 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
   - `ultima_extracao_em` (TIMESTAMP NULL)
 - **Script de Migração:** Integrado em `backend/migrations.py`
 - **Descrição:** Permite habilitar ou desabilitar a extração de contatos por grupo e definir o intervalo de consulta à W-API em minutos.
+
+---
+
+### [2026-08-02] Simulação de Tempo Digitando por Grupo
+- **Tabela Afetada:** `grupos_whatsapp`
+- **Coluna Adicionada:**
+  - `tempo_digitando_segundos` (INTEGER DEFAULT 0) — Tempo em segundos (0=desabilitado, 1-60s) que o bot exibe "digitando..." antes de disparar a mensagem
+- **Script de Migração:** `backend/scripts/add_tempo_digitando.py` e integrado em `backend/migrations.py`
+- **Descrição:** Permite configurar no grupo por quanto tempo o bot simula o status `composing` (digitando) via W-API antes do envio de cada mensagem.
+

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, ExternalLink, Search, CalendarDays, PlusCircle, Pencil, CheckCircle2, ChevronDown, RefreshCw, Repeat, Flag, Webhook } from 'lucide-react';
+import { Users, ExternalLink, Search, CalendarDays, PlusCircle, Pencil, CheckCircle2, ChevronDown, RefreshCw, Repeat, Flag, Webhook, MessageSquare } from 'lucide-react';
+
 import { ModalPortal } from '../../../components/common';
 import { DIAS_SEMANA } from '../../../utils/constants';
 
@@ -156,10 +157,33 @@ const GroupForm = ({
               <option value={360}>A cada 6 horas</option>
               <option value={1440}>A cada 24 horas (1x ao dia)</option>
             </select>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-              Frequência de consulta da W-API para extração de contatos.
-            </p>
           </div>
+        </div>
+
+        {/* Tempo de Digitando */}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="label-premium">
+            <MessageSquare size={12} /> Simular Digitando Antes de Enviar
+          </label>
+          <select
+            value={novoGrupo.tempo_digitando_segundos ?? 0}
+            onChange={e => setNovoGrupo({ ...novoGrupo, tempo_digitando_segundos: parseInt(e.target.value) })}
+            style={{ width: '100%' }}
+          >
+            <option value={0}>Desabilitado (envio imediato)</option>
+            <option value={3}>3 segundos</option>
+            <option value={5}>5 segundos</option>
+            <option value={10}>10 segundos</option>
+            <option value={15}>15 segundos</option>
+            <option value={30}>30 segundos</option>
+            <option value={60}>60 segundos</option>
+          </select>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: (novoGrupo.tempo_digitando_segundos ?? 0) > 0 ? '#22c55e' : 'var(--text-dim)', display: 'inline-block', flexShrink: 0 }} />
+            {(novoGrupo.tempo_digitando_segundos ?? 0) > 0
+              ? `O bot ficará digitando por ${novoGrupo.tempo_digitando_segundos}s antes de cada mensagem (texto, mídia, áudio...).`
+              : 'Mensagens serão enviadas sem simular digitação prévia.'}
+          </p>
         </div>
 
         {/* Webhook de Extração de Contatos — visível apenas quando habilitado */}

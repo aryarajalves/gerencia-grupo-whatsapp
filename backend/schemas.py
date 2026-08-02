@@ -39,6 +39,8 @@ class GrupoWhatsAppBase(BaseModel):
     intervalo_extracao_minutos: int = 30
     ultima_extracao_em: Optional[datetime] = None
     webhook_extracao_url: Optional[str] = None  # URL para receber novos contatos extraídos via POST
+    tempo_digitando_segundos: int = 0  # 0=desabilitado, 1-60=segundos de simulação "digitando"
+
 
 class GrupoWhatsAppCreate(GrupoWhatsAppBase):
     pass

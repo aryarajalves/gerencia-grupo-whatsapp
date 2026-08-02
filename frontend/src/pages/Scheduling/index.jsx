@@ -118,7 +118,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
         paddingBottom: '12px'
       }}>
         <button
-          onClick={() => setActiveSubTab('list')}
+          onClick={() => { if (editingId) cancelEdit(); else setActiveSubTab('list'); }}
           style={{
             display: 'flex',
             alignItems: 'center',

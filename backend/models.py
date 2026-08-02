@@ -59,6 +59,8 @@ class GrupoWhatsApp(Base):
     intervalo_extracao_minutos = Column(Integer, default=30)
     ultima_extracao_em = Column(DateTime, nullable=True)
     webhook_extracao_url = Column(String, nullable=True)  # URL para envio de novos contatos extraídos
+    tempo_digitando_segundos = Column(Integer, default=0)  # 0=desabilitado, 1-60=segundos de simulação "digitando"
+
 
 
 class MensagemDisparada(Base):
