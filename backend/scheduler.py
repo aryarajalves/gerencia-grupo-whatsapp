@@ -230,8 +230,8 @@ def iniciar_agendador():
     scheduler.add_job(job_avancar_dias, 'cron', hour=0, minute=0, next_run_time=datetime.now(BR_TZ), max_instances=2)
     # Status e Contatos
     scheduler.add_job(job_verificar_status, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ), max_instances=2)
-    # Polling a cada 5 min — o intervalo real por grupo é respeitado dentro do job
-    scheduler.add_job(job_atualizar_contatos, 'interval', minutes=5, next_run_time=datetime.now(BR_TZ), max_instances=2)
+    # Polling a cada 1 min — o intervalo real por grupo é respeitado dentro do job
+    scheduler.add_job(job_atualizar_contatos, 'interval', minutes=1, next_run_time=datetime.now(BR_TZ), max_instances=2)
     # Backup automático a cada 15 minutos checa se venceu o intervalo
     scheduler.add_job(job_backup_automatico, 'interval', minutes=15, next_run_time=datetime.now(BR_TZ), max_instances=2)
     
