@@ -162,9 +162,18 @@ def job_verificar_status():
         db.close()
 
 def job_atualizar_contatos():
+    from services.queue_service import is_queue_available, publish_extraction_task
     db = SessionLocal()
     try:
-        atualizar_contagem_contatos(db)
+        if is_queue_available():
+            grupos = db.query(models.GrupoWhatsApp).filter(models.GrupoWhatsApp.ativo == True).all()
+            for g in grupos:
+                publish_extraction_task(g.id)
+            print(f"[{datetime.now(BR_TZ).strftime('%H:%M:%S')}] {len(grupos)} tarefas de extração enfileiradas no RabbitMQ.")
+        else:
+            atualizar_contagem_contatos(db)
+    except Exception as e:
+        print(f"Erro no job de atualizar contatos: {e}")
     finally:
         db.close()
 
@@ -201,18 +210,19 @@ def job_backup_automatico():
 
 def iniciar_agendador():
     scheduler = BackgroundScheduler()
-    # Verificação de mensagens
-    scheduler.add_job(verificar_e_disparar_mensagens, 'interval', seconds=30, next_run_time=datetime.now(BR_TZ))
+    # Verificação de mensagens (máximo de paralelismo e execução pontual)
+    scheduler.add_job(verificar_e_disparar_mensagens, 'interval', seconds=30, next_run_time=datetime.now(BR_TZ), max_instances=5)
     # Ciclo diário
-    scheduler.add_job(job_avancar_dias, 'cron', hour=0, minute=0, next_run_time=datetime.now(BR_TZ))
+    scheduler.add_job(job_avancar_dias, 'cron', hour=0, minute=0, next_run_time=datetime.now(BR_TZ), max_instances=2)
     # Status e Contatos
-    scheduler.add_job(job_verificar_status, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ))
-    scheduler.add_job(job_atualizar_contatos, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ))
+    scheduler.add_job(job_verificar_status, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ), max_instances=2)
+    scheduler.add_job(job_atualizar_contatos, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ), max_instances=2)
     # Backup automático a cada 15 minutos checa se venceu o intervalo
-    scheduler.add_job(job_backup_automatico, 'interval', minutes=15, next_run_time=datetime.now(BR_TZ))
+    scheduler.add_job(job_backup_automatico, 'interval', minutes=15, next_run_time=datetime.now(BR_TZ), max_instances=2)
     
     scheduler.start()
     return scheduler
+
 
 # Compatibilidade
 enviar_payload_n8n = enviar_wapi
