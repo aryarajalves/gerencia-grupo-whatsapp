@@ -26,7 +26,7 @@ def test_montar_payload_status_grupo_fechar():
     assert tipo == "status_grupo"
     assert payload["groupId"] == "120363123456@g.us"
     assert payload["adminOnlyMessage"] is True
-    assert payload["adminOnlySettings"] is True
+    assert "adminOnlySettings" not in payload
 
 class DummyMsgComTexto:
     tipo_de_mensagem = "status_grupo"
@@ -34,14 +34,14 @@ class DummyMsgComTexto:
     mensagem = "O grupo está aberto! Podem enviar dúvidas."
 
 def test_montar_payload_status_grupo_abrir():
-    """Ao abrir o grupo, ambos adminOnlyMessage e adminOnlySettings devem ser False."""
+    """Ao abrir o grupo, apenas adminOnlyMessage deve ser alterado (False). adminOnlySettings não deve ser afetado."""
     grupo = DummyGrupo()
     msg = DummyMsgAbrir()
     payload, tipo = montar_payload(grupo, msg)
     assert tipo == "status_grupo"
     assert payload["groupId"] == "120363123456@g.us"
     assert payload["adminOnlyMessage"] is False
-    assert payload["adminOnlySettings"] is False  # CORRIGIDO: deve ser False ao abrir
+    assert "adminOnlySettings" not in payload
     assert payload["_optional_text"] == ""
 
 def test_montar_payload_status_grupo_com_texto_opcional():

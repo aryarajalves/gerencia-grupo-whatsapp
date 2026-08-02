@@ -107,7 +107,6 @@ def montar_payload(grupo, msg):
         payload_custom = {
             "groupId": grupo.id_do_grupo,
             "adminOnlyMessage": is_fechar,
-            "adminOnlySettings": is_fechar,
             "_optional_text": optional_text
         }
         return payload_custom, "status_grupo"
