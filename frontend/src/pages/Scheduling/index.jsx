@@ -118,7 +118,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
         paddingBottom: '12px'
       }}>
         <button
-          onClick={() => { if (editingId) cancelEdit(); else setActiveSubTab('list'); }}
+          onClick={() => { cancelEdit(); setActiveSubTab('list'); }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -151,6 +151,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
         <button
           onClick={() => {
             if (activeSubTab === 'form' && editingId) cancelEdit();
+            else if (editingId) cancelEdit();
             else setActiveSubTab('form');
           }}
           style={{
@@ -208,7 +209,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
           onDelete={handleDelete}
           openConfirm={openConfirm}
           editingId={editingId}
-          onOpenNewForm={() => setActiveSubTab('form')}
+          onOpenNewForm={() => { cancelEdit(); setActiveSubTab('form'); }}
         />
       )}
 
