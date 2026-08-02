@@ -165,11 +165,25 @@ def job_atualizar_contatos():
     from services.queue_service import is_queue_available, publish_extraction_task
     db = SessionLocal()
     try:
+        agora = datetime.now(BR_TZ).replace(tzinfo=None)
+        grupos = db.query(models.GrupoWhatsApp).filter(
+            models.GrupoWhatsApp.ativo == True,
+            models.GrupoWhatsApp.extrair_contatos == True
+        ).all()
+
         if is_queue_available():
-            grupos = db.query(models.GrupoWhatsApp).filter(models.GrupoWhatsApp.ativo == True).all()
+            enfileirados = 0
             for g in grupos:
+                intervalo = getattr(g, 'intervalo_extracao_minutos', 30) or 30
+                ultima = getattr(g, 'ultima_extracao_em', None)
+                if ultima:
+                    minutos_decorridos = (agora - ultima).total_seconds() / 60.0
+                    if minutos_decorridos < intervalo:
+                        continue  # ainda não chegou a hora deste grupo
                 publish_extraction_task(g.id)
-            print(f"[{datetime.now(BR_TZ).strftime('%H:%M:%S')}] {len(grupos)} tarefas de extração enfileiradas no RabbitMQ.")
+                enfileirados += 1
+            if enfileirados > 0:
+                print(f"[{agora.strftime('%H:%M:%S')}] {enfileirados} grupos enfileirados para extração (de {len(grupos)} ativos).")
         else:
             atualizar_contagem_contatos(db)
     except Exception as e:
@@ -216,7 +230,8 @@ def iniciar_agendador():
     scheduler.add_job(job_avancar_dias, 'cron', hour=0, minute=0, next_run_time=datetime.now(BR_TZ), max_instances=2)
     # Status e Contatos
     scheduler.add_job(job_verificar_status, 'interval', minutes=20, next_run_time=datetime.now(BR_TZ), max_instances=2)
-    scheduler.add_job(job_atualizar_contatos, 'interval', minutes=30, next_run_time=datetime.now(BR_TZ), max_instances=2)
+    # Polling a cada 5 min — o intervalo real por grupo é respeitado dentro do job
+    scheduler.add_job(job_atualizar_contatos, 'interval', minutes=5, next_run_time=datetime.now(BR_TZ), max_instances=2)
     # Backup automático a cada 15 minutos checa se venceu o intervalo
     scheduler.add_job(job_backup_automatico, 'interval', minutes=15, next_run_time=datetime.now(BR_TZ), max_instances=2)
     
