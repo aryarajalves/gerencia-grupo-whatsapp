@@ -120,6 +120,11 @@ def sync_database():
             conn.execute(text("ALTER TABLE mensagens_disparadas ADD COLUMN opcoes_enquete TEXT;"))
             conn.commit()
 
+        if 'admin_only_settings' not in columns:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'admin_only_settings' em 'mensagens_disparadas'...")
+            conn.execute(text("ALTER TABLE mensagens_disparadas ADD COLUMN admin_only_settings BOOLEAN;"))
+            conn.commit()
+
         columns_grupos = [c['name'] for c in inspector.get_columns('grupos_whatsapp')]
         if 'ativo' not in columns_grupos:
             logger.info("[BANCO DE DADOS] Adicionando coluna 'ativo' em 'grupos_whatsapp'...")
