@@ -288,85 +288,107 @@ const MessageForm = ({
             <div className="form-group" style={{ marginBottom: 0 }}>
               {novaMensagem.tipo_de_mensagem === 'enquete' ? (
                 <>
-                  <label className="label-premium"><LayoutGrid size={12} /> Opções da Enquete (Uma por linha)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    {/* Editor original do texto */}
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <textarea 
-                        value={novaMensagem.opcoes_enquete} 
-                        onChange={e => setNovaMensagem({ ...novaMensagem, opcoes_enquete: e.target.value })} 
-                        placeholder="Sim, vou participar!&#10;Ainda estou em dúvida&#10;Não poderei ir"
-                        style={{ 
-                          width: '100%', 
-                          minHeight: '160px', 
-                          resize: 'vertical', 
-                          fontSize: '0.9rem', 
-                          lineHeight: '1.6', 
-                          padding: '0.85rem 1rem',
-                          background: 'rgba(15, 23, 42, 0.65)',
+                  <label className="label-premium"><LayoutGrid size={12} /> Opções da Enquete (Respostas)</label>
+                  
+                  {/* Lista de Inputs Numerados Individuais */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                    {((novaMensagem.opcoes_enquete || '').split('\n').filter(o => o.trim()).length > 0
+                      ? (novaMensagem.opcoes_enquete || '').split('\n')
+                      : ['', '']
+                    ).map((opcaoText, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ 
+                          width: '26px', 
+                          height: '26px', 
+                          borderRadius: '50%', 
+                          background: 'rgba(34, 211, 238, 0.15)', 
+                          color: '#22d3ee', 
                           border: '1px solid rgba(34, 211, 238, 0.3)',
-                          borderRadius: '12px',
-                          color: '#f8fafc',
-                          boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4)',
-                          fontFamily: 'inherit'
-                        }}
-                        required
-                      />
-                      <div style={{ fontSize: '0.73rem', color: 'var(--text-dim)', marginTop: '6px' }}>
-                        💡 Digite 1 opção por linha.
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          flexShrink: 0
+                        }}>
+                          {index + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={opcaoText}
+                          onChange={e => {
+                            const linhas = (novaMensagem.opcoes_enquete || '').split('\n');
+                            // Garantir array com tamanho suficiente
+                            while (linhas.length <= index) linhas.push('');
+                            linhas[index] = e.target.value;
+                            setNovaMensagem({ ...novaMensagem, opcoes_enquete: linhas.join('\n') });
+                          }}
+                          placeholder={`Digite a opção ${index + 1}...`}
+                          style={{ 
+                            flex: 1, 
+                            height: '42px', 
+                            fontSize: '0.9rem', 
+                            padding: '0 12px',
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '10px'
+                          }}
+                        />
+                        {/* Botão de Remover Opção (se houver mais de 2 opções) */}
+                        {((novaMensagem.opcoes_enquete || '').split('\n').length > 2) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const linhas = (novaMensagem.opcoes_enquete || '').split('\n').filter((_, i) => i !== index);
+                              setNovaMensagem({ ...novaMensagem, opcoes_enquete: linhas.join('\n') });
+                            }}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                            title="Remover opção"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Preview visual numerado */}
-                    <div style={{ 
-                      background: 'rgba(0, 0, 0, 0.3)', 
-                      border: '1px dashed rgba(34, 211, 238, 0.3)', 
-                      borderRadius: '12px', 
-                      padding: '0.85rem 1rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      maxHeight: '220px',
-                      overflowY: 'auto'
-                    }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#22d3ee', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>Visualização das Respostas</span>
-                        <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>({(novaMensagem.opcoes_enquete || '').split('\n').filter(o => o.trim()).length} opções)</span>
-                      </div>
-
-                      {(novaMensagem.opcoes_enquete || '').split('\n').filter(o => o.trim()).length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {(novaMensagem.opcoes_enquete || '').split('\n').filter(o => o.trim()).map((opt, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(255, 255, 255, 0.04)', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                              <span style={{ 
-                                background: 'rgba(34, 211, 238, 0.2)', 
-                                color: '#22d3ee', 
-                                border: '1px solid rgba(34, 211, 238, 0.4)',
-                                borderRadius: '50%', 
-                                width: '20px', 
-                                height: '20px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                fontSize: '0.7rem', 
-                                fontWeight: 800, 
-                                flexShrink: 0,
-                                marginTop: '2px'
-                              }}>
-                                {idx + 1}
-                              </span>
-                              <span style={{ fontSize: '0.83rem', color: '#fff', wordBreak: 'break-word', lineHeight: '1.4' }}>
-                                {opt}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontStyle: 'italic', textAlign: 'center', margin: 'auto' }}>
-                          Digite as opções ao lado para ver a lista numerada.
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </div>
+
+                  {/* Botão para Adicionar Nova Opção */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const linhas = (novaMensagem.opcoes_enquete || '').split('\n');
+                      linhas.push('');
+                      setNovaMensagem({ ...novaMensagem, opcoes_enquete: linhas.join('\n') });
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      background: 'rgba(34, 211, 238, 0.12)',
+                      color: '#22d3ee',
+                      border: '1px solid rgba(34, 211, 238, 0.3)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    + Adicionar Outra Opção
+                  </button>
 
                   <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-main)' }}>
