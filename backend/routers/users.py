@@ -40,7 +40,7 @@ def listar_usuarios(db: Session = Depends(get_db)):
 # --- ENDPOINTS DE CONVITE E REGISTRO ---
 
 @router.post("/convite", response_model=schemas.Invitation, dependencies=[Depends(security.check_super_admin)])
-def criar_convite(invite: schemas.InvitationCreate, db: Session = Depends(get_db)):
+def criar_convite(invite: schemas.InvitationCreate, request: Request, db: Session = Depends(get_db)):
     token = secrets.token_urlsafe(32)
     expira_em = None
     if invite.expira_horas:
@@ -57,8 +57,16 @@ def criar_convite(invite: schemas.InvitationCreate, db: Session = Depends(get_db
     db.commit()
     db.refresh(db_invite)
     
-    # URL do Frontend (usar variável de ambiente se disponível)
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    # URL do Frontend: Prioridade: FRONTEND_URL -> Header Origin/Referer -> Primeira origem de ALLOWED_ORIGINS -> localhost
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not frontend_url:
+        origin = request.headers.get("origin") or request.headers.get("referer")
+        if origin:
+            frontend_url = origin.rstrip("/")
+        else:
+            raw_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+            valid_origins = [o.strip().rstrip("/") for o in raw_origins if o.strip() and o.strip() != "*"]
+            frontend_url = valid_origins[0] if valid_origins else "http://localhost:5173"
     
     if db_invite.tipo == "reset":
         link = f"{frontend_url}/setup/{token}"
@@ -69,6 +77,37 @@ def criar_convite(invite: schemas.InvitationCreate, db: Session = Depends(get_db
     response_data = schemas.Invitation.model_validate(db_invite)
     response_data.link = link
     return response_data
+
+@router.get("/convites", response_model=list[schemas.Invitation], dependencies=[Depends(security.check_super_admin)])
+def listar_convites(request: Request, db: Session = Depends(get_db)):
+    convites = db.query(models.Invitation).order_by(models.Invitation.criado_em.desc()).all()
+    
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not frontend_url:
+        origin = request.headers.get("origin") or request.headers.get("referer")
+        if origin:
+            frontend_url = origin.rstrip("/")
+        else:
+            raw_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+            valid_origins = [o.strip().rstrip("/") for o in raw_origins if o.strip() and o.strip() != "*"]
+            frontend_url = valid_origins[0] if valid_origins else "http://localhost:5173"
+
+    res = []
+    for c in convites:
+        link = f"{frontend_url}/setup/{c.token}" if c.tipo == "reset" else f"{frontend_url}/registrar/{c.token}"
+        data = schemas.Invitation.model_validate(c)
+        data.link = link
+        res.append(data)
+    return res
+
+@router.delete("/convites/{convite_id}", dependencies=[Depends(security.check_super_admin)])
+def deletar_convite(convite_id: uuid.UUID, db: Session = Depends(get_db)):
+    c = db.query(models.Invitation).filter(models.Invitation.id == convite_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Convite não encontrado")
+    db.delete(c)
+    db.commit()
+    return {"message": "Convite removido com sucesso"}
 
 @router.get("/convite/{token}", response_model=schemas.Invitation)
 def validar_convite(token: str, db: Session = Depends(get_db)):

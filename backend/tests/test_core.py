@@ -92,7 +92,9 @@ def test_crud_usuario(client):
     }
     response = client.post("/convite", json=invite_payload, headers=headers)
     assert response.status_code == 200
-    token = response.json()["token"]
+    res_data = response.json()
+    token = res_data["token"]
+    assert "http://testserver/registrar/" in res_data["link"] or "http://localhost:5173/registrar/" in res_data["link"]
     
     # 2. Registrar Usuário usando o Convite
     register_payload = {

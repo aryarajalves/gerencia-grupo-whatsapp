@@ -15,6 +15,9 @@ export const useUsers = (openConfirm) => {
         setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 4000);
     };
 
+    const [activeTab, setActiveTab] = useState('usuarios');
+    const [invites, setInvites] = useState([]);
+
     const fetchUsers = async () => {
         try {
             const res = await axiosInstance.get('/usuarios/');
@@ -24,8 +27,18 @@ export const useUsers = (openConfirm) => {
         }
     };
 
+    const fetchInvites = async () => {
+        try {
+            const res = await axiosInstance.get('/convites');
+            setInvites(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
         fetchUsers();
+        fetchInvites();
     }, []);
 
     const startResetPassword = (user) => {
@@ -45,6 +58,23 @@ export const useUsers = (openConfirm) => {
                     showToast("Usuário removido com sucesso!", "success");
                 } catch (err) {
                     showToast(err.response?.data?.detail || "Erro ao deletar usuário", "error");
+                }
+            }
+        });
+    };
+
+    const handleDeleteInvite = async (id) => {
+        openConfirm({
+            title: 'Excluir Convite',
+            message: 'Tem certeza que deseja revogar este link de convite?',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await axiosInstance.delete(`/convites/${id}`);
+                    fetchInvites();
+                    showToast("Convite removido com sucesso!", "success");
+                } catch (err) {
+                    showToast(err.response?.data?.detail || "Erro ao deletar convite", "error");
                 }
             }
         });
@@ -74,6 +104,9 @@ export const useUsers = (openConfirm) => {
 
     return {
         usuarios,
+        invites,
+        activeTab,
+        setActiveTab,
         searchTerm,
         setSearchTerm,
         cargoFilter,
@@ -86,7 +119,9 @@ export const useUsers = (openConfirm) => {
         toast,
         filteredUsers,
         handleDeleteUser,
+        handleDeleteInvite,
         toggleStatus,
-        startResetPassword
+        startResetPassword,
+        refreshInvites: fetchInvites
     };
 };

@@ -7,7 +7,7 @@ services:
   # BACKEND - FastAPI (API REST)
   # =============================================================
   backend:
-    image: aryarajalves/gerenciador-zap-grupo:api-1.3.0
+    image: aryalvesfernandes/gerenciador-grupo:backend-1.0.0
     environment:
 
       # --- Banco de Dados ---
@@ -30,6 +30,9 @@ services:
       # URL de conexão com o Redis. Use o nome do container na mesma rede Docker.
       # Formato: redis://host:6379 ou redis://:senha@host:6379
       - REDIS_URL=redis://redis:6379
+
+      # --- URLs do Sistema ---
+      - FRONTEND_URL=https://zapgrupo.aryaraj.shop
 
       # --- Segurança da API ---
       # Chave secreta usada para assinar os tokens JWT.
@@ -75,7 +78,7 @@ services:
   # WORKER - Agendador de Tarefas (Disparos e Sincronização)
   # =============================================================
   worker:
-    image: aryarajalves/gerenciador-zap-grupo:api-1.3.0
+    image: aryalvesfernandes/gerenciador-grupo:backend-1.0.0
     command: python worker.py
     environment:
       - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
@@ -96,7 +99,7 @@ services:
   # FRONTEND - React (Interface Web)
   # =============================================================
   frontend:
-    image: aryarajalves/gerenciador-zap-grupo:app-1.3.0
+    image: aryalvesfernandes/gerenciador-grupo:frontend-1.0.0
     environment:
 
       # --- Banco de Dados (referência, não usado diretamente pelo frontend em runtime) ---

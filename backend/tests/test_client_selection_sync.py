@@ -2,6 +2,14 @@ import pytest
 import uuid
 import models
 
+def test_listar_clientes_retorna_lista_vazia(client, db_session):
+    # Garante que não há clientes cadastrados e a API retorna lista vazia sem criar cliente padrão
+    from client_context import get_active_client_id
+    resp = client.get("/clientes/")
+    assert resp.status_code == 200
+    assert resp.json() == []
+    assert get_active_client_id(db_session) is None
+
 def test_client_selection_updates_config_and_syncs_changes(client, db_session):
     # 1. Cria dois clientes
     c1 = models.Cliente(id=uuid.uuid4(), nome="Cliente A Original", logo_url="https://logo.com/a.png", wapi_instance_id="INST_A", wapi_token="TOK_A", ativo=True)

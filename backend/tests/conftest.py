@@ -11,6 +11,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 # Precisamos adicionar o diretório pai ao path se não estiver
 import sys
 import os
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["ALLOWED_HOSTS"] = "*" # Permitir qualquer host nos testes
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

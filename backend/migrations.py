@@ -94,6 +94,11 @@ def sync_database():
     if not database_url:
         raise RuntimeError("ERRO: Variável de ambiente DATABASE_URL não definida.")
 
+    if database_url.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
+        logger.info("[BANCO DE DADOS] SQLite sincronizado para testes/desenvolvimento.")
+        return
+
     user, password, host, port, dbname = _parse_db_url(database_url)
 
     _wait_for_postgres(user, password, host, port)

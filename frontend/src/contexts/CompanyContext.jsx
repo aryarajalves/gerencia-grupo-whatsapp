@@ -6,7 +6,7 @@ const CompanyContext = createContext(null);
 
 export const CompanyProvider = ({ children }) => {
   const { isLoggedIn } = useAuth();
-  const [clients, setClients] = useState([]);
+  const [clients, setClients] = useState(null);
   const [activeClient, setActiveClient] = useState(null);
   const [companyInfo, setCompanyInfo] = useState({ 
     name: 'Empresa de Teste', 
@@ -29,15 +29,16 @@ export const CompanyProvider = ({ children }) => {
       if (found) {
         setActiveClient(found);
         setCompanyInfo({
-          name: found.nome || cfgRes.data?.COMPANY_NAME || 'Empresa de Teste',
+          name: found.nome || cfgRes.data?.COMPANY_NAME || '',
           logo: found.logo_url || cfgRes.data?.COMPANY_LOGO || '',
           logoSize: String(found.logo_size || cfgRes.data?.COMPANY_LOGO_SIZE || '44')
         });
-      } else if (cfgRes.data) {
+      } else {
+        setActiveClient(null);
         setCompanyInfo({
-          name: cfgRes.data.COMPANY_NAME || 'Empresa de Teste',
-          logo: cfgRes.data.COMPANY_LOGO || '',
-          logoSize: String(cfgRes.data.COMPANY_LOGO_SIZE || '44')
+          name: '',
+          logo: '',
+          logoSize: '44'
         });
       }
     } catch (error) {

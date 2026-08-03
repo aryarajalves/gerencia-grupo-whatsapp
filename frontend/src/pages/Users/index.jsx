@@ -1,14 +1,18 @@
 import React from 'react';
-import { XCircle, CheckCircle2 } from 'lucide-react';
+import { XCircle, CheckCircle2, Users, Link2 } from 'lucide-react';
 import { useUsers } from './hooks/useUsers';
 import UserHeader from './components/UserHeader';
 import UserFilters from './components/UserFilters';
 import UserTable from './components/UserTable';
+import InviteTable from './components/InviteTable';
 import InviteModal from './components/InviteModal';
 import ResetModal from './components/ResetModal';
 
 const GestaoUsuarios = ({ openConfirm }) => {
     const {
+        invites,
+        activeTab,
+        setActiveTab,
         searchTerm,
         setSearchTerm,
         cargoFilter,
@@ -21,36 +25,96 @@ const GestaoUsuarios = ({ openConfirm }) => {
         toast,
         filteredUsers,
         handleDeleteUser,
+        handleDeleteInvite,
         toggleStatus,
-        startResetPassword
+        startResetPassword,
+        refreshInvites
     } = useUsers(openConfirm);
 
     return (
         <div className="fade-in" style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
             <UserHeader setShowModal={setShowInviteModal} />
 
-            <UserFilters 
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                cargoFilter={cargoFilter}
-                setCargoFilter={setCargoFilter}
-            />
+            {/* Abas */}
+            <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.5rem' }}>
+                <button
+                    onClick={() => setActiveTab('usuarios')}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: activeTab === 'usuarios' ? '2px solid var(--primary)' : '2px solid transparent',
+                        padding: '0.75rem 1.25rem',
+                        color: activeTab === 'usuarios' ? '#fff' : 'var(--text-dim)',
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    <Users size={18} /> Usuários Ativos ({filteredUsers.length})
+                </button>
 
-            <UserTable 
-                filteredUsers={filteredUsers}
-                startEditUser={startResetPassword}
-                toggleStatus={toggleStatus}
-                handleDeleteUser={handleDeleteUser}
-            />
+                <button
+                    onClick={() => setActiveTab('convites')}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: activeTab === 'convites' ? '2px solid var(--primary)' : '2px solid transparent',
+                        padding: '0.75rem 1.25rem',
+                        color: activeTab === 'convites' ? '#fff' : 'var(--text-dim)',
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    <Link2 size={18} /> Links de Convite ({invites.length})
+                </button>
+            </div>
+
+            {activeTab === 'usuarios' ? (
+                <>
+                    <UserFilters 
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        cargoFilter={cargoFilter}
+                        setCargoFilter={setCargoFilter}
+                    />
+
+                    <UserTable 
+                        filteredUsers={filteredUsers}
+                        startEditUser={startResetPassword}
+                        toggleStatus={toggleStatus}
+                        handleDeleteUser={handleDeleteUser}
+                    />
+                </>
+            ) : (
+                <InviteTable 
+                    invites={invites}
+                    handleDeleteInvite={handleDeleteInvite}
+                />
+            )}
 
             <InviteModal 
                 showModal={showInviteModal}
-                setShowModal={setShowInviteModal}
+                setShowModal={(show) => {
+                    setShowInviteModal(show);
+                    if (!show) refreshInvites();
+                }}
             />
 
             <ResetModal 
                 showModal={showResetModal}
-                setShowModal={setShowResetModal}
+                setShowModal={(show) => {
+                    setShowResetModal(show);
+                    if (!show) refreshInvites();
+                }}
                 user={selectedUser}
             />
 

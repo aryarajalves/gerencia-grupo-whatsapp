@@ -19,6 +19,13 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, conjuntosAlertaCount = 0, 
   const dropdownRef = useRef(null);
 
   useEffect(() => {
+    if (Array.isArray(clients) && clients.length === 0) {
+      // Abre automaticamente APENAS se já tiver carregado os clientes do backend E não houver nenhum cliente cadastrado
+      setIsModalOpen(true);
+    }
+  }, [clients]);
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
@@ -116,10 +123,10 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, conjuntosAlertaCount = 0, 
             )}
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {companyName || 'Zap Group'}
+                {companyName || (clients && clients.length === 0 ? 'Nenhum Cliente' : 'Zap Group')}
               </div>
               <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '3px' }}>
-                {activeClient?.subtitulo || 'CONTROL PANEL'}
+                {activeClient?.subtitulo || (clients && clients.length === 0 ? 'CADASTRAR INSTÂNCIA' : 'CONTROL PANEL')}
               </div>
             </div>
           </div>
