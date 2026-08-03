@@ -24,6 +24,10 @@ const GestaoUsuarios = ({ openConfirm }) => {
         selectedUser,
         toast,
         filteredUsers,
+        currentPage,
+        setCurrentPage,
+        itemsPerPage,
+        setItemsPerPage,
         handleDeleteUser,
         handleDeleteInvite,
         toggleStatus,
@@ -92,12 +96,20 @@ const GestaoUsuarios = ({ openConfirm }) => {
                         startEditUser={startResetPassword}
                         toggleStatus={toggleStatus}
                         handleDeleteUser={handleDeleteUser}
+                        currentPage={currentPage}
+                        setCurrentPage={setCurrentPage}
+                        itemsPerPage={itemsPerPage}
+                        setItemsPerPage={setItemsPerPage}
                     />
                 </>
             ) : (
                 <InviteTable 
                     invites={invites}
                     handleDeleteInvite={handleDeleteInvite}
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
                 />
             )}
 

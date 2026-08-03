@@ -89,6 +89,14 @@ export const useUsers = (openConfirm) => {
         }
     };
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Resetar para a primeira página ao alterar filtros ou abas
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, cargoFilter, activeTab]);
+
     const filteredUsers = usuarios.filter(u => {
         const matchesSearch = (u.nome?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                              (u.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
@@ -118,6 +126,10 @@ export const useUsers = (openConfirm) => {
         selectedUser,
         toast,
         filteredUsers,
+        currentPage,
+        setCurrentPage,
+        itemsPerPage,
+        setItemsPerPage,
         handleDeleteUser,
         handleDeleteInvite,
         toggleStatus,
