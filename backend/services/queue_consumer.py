@@ -2,6 +2,7 @@ import os
 import time
 import json
 import pika
+from sqlalchemy import func
 from core.logger import logger
 import models
 from database import SessionLocal
@@ -25,7 +26,21 @@ def _process_dispatch(ch, method, properties, body):
         msg = db.query(models.MensagemDisparada).filter(models.MensagemDisparada.id == msg_id).first()
 
         if grupo and msg:
-            enviar_wapi(grupo, msg, db)
+            import pytz
+            BR_TZ = pytz.timezone('America/Sao_Paulo')
+            hoje = datetime.now(BR_TZ).date()
+
+            ja_enviado = db.query(models.LogDisparo).filter(
+                models.LogDisparo.grupo_nome == grupo.nome,
+                models.LogDisparo.status == "Sucesso",
+                models.LogDisparo.mensagem_id == msg.id,
+                func.date(models.LogDisparo.criado_em) == hoje
+            ).first()
+
+            if ja_enviado:
+                logger.info(f"[CONSUMER DISPAROS] Disparo ignorado pois já foi executado com sucesso hoje -> Grupo {grupo.nome} | Msg {msg.id}")
+            else:
+                enviar_wapi(grupo, msg, db)
         else:
             logger.warning(f"[CONSUMER DISPAROS] Grupo ou Mensagem não encontrados: {grupo_id} | {msg_id}")
 
