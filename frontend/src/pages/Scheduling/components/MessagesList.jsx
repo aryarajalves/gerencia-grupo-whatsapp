@@ -138,8 +138,13 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
                           ? `Alterar nome para: "${m.mensagem}"` 
                           : m.tipo_de_mensagem === 'status_grupo' ? (
                             <div>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', background: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? 'rgba(16,185,129,0.15)' : 'rgba(236,72,153,0.15)', color: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '#10b981' : '#ec4899', border: '1px solid', borderColor: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? 'rgba(16,185,129,0.3)' : 'rgba(236,72,153,0.3)' }}>
-                                {(m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '🔓 Abrir Grupo (Todos enviam)' : '🔒 Fechar Grupo (Apenas admins enviam)'}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, padding: '5px 10px', borderRadius: '8px', background: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? 'rgba(16,185,129,0.15)' : 'rgba(236,72,153,0.15)', color: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '#10b981' : '#ec4899', border: '1px solid', borderColor: (m.link_midia === 'abrir' || m.mensagem === 'abrir') ? 'rgba(16,185,129,0.3)' : 'rgba(236,72,153,0.3)' }}>
+                                  {(m.link_midia === 'abrir' || m.mensagem === 'abrir') ? '🔓 Abrir Grupo (Todos enviam)' : '🔒 Fechar Grupo (Apenas admins enviam)'}
+                                </div>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.75rem', padding: '4px 9px', borderRadius: '6px', background: m.admin_only_settings === true ? 'rgba(59,130,246,0.15)' : m.admin_only_settings === false ? 'rgba(16,185,129,0.15)' : 'rgba(167,139,250,0.15)', color: m.admin_only_settings === true ? '#3b82f6' : m.admin_only_settings === false ? '#10b981' : '#a78bfa', border: '1px solid', borderColor: m.admin_only_settings === true ? 'rgba(59,130,246,0.3)' : m.admin_only_settings === false ? 'rgba(16,185,129,0.3)' : 'rgba(167,139,250,0.3)' }}>
+                                  {m.admin_only_settings === true ? '⚙️ Configs: Apenas Admins Editam' : m.admin_only_settings === false ? '⚙️ Configs: Todos Editam' : '⚙️ Configs: Manter Atual'}
+                                </div>
                               </div>
                               {(m.mensagem && m.mensagem !== 'abrir' && m.mensagem !== 'fechar') ? (
                                 <div style={{ marginTop: '6px', fontSize: '0.9rem', color: 'var(--text-main)', fontStyle: 'normal' }}>
@@ -177,7 +182,7 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
                         </div>
                       )}
 
-                      {m.link_midia && m.tipo_de_mensagem !== 'nome_grupo' && (
+                      {m.link_midia && m.tipo_de_mensagem !== 'nome_grupo' && m.tipo_de_mensagem !== 'status_grupo' && (
                         <div 
                           onClick={() => setFullscreenMedia({ url: m.link_midia, type: m.tipo_de_mensagem })}
                           style={{ marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', height: '50px', border: `1px solid ${cfg.border}`, display: 'flex', alignItems: 'center', gap: '10px', padding: '6px', background: 'rgba(255,255,255,0.03)', cursor: 'zoom-in' }}

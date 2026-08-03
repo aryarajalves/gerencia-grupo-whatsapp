@@ -192,6 +192,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
                     >
                         <option value="">Todos Status</option>
                         <option value="sucesso">Sucesso</option>
+                        <option value="ignorado">Ignorado</option>
                         <option value="erro">Erro</option>
                         <option value="falha_definitiva">Falha Definitiva</option>
                         <option value="processando">Processando</option>
@@ -271,6 +272,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
                             const tipoKey = (log.tipo || log.tipo_mensagem || 'texto').toLowerCase();
                             const cfg = TIPO_CONFIG[tipoKey] || TIPO_CONFIG.texto;
                             const Icon = cfg.icon;
+                            const statusLower = (log.status || '').toLowerCase();
                             return (
                                 <tr key={log.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                     <td style={{ padding: '1rem 1.5rem' }}>
@@ -279,16 +281,19 @@ const HistoricoEnvios = ({ openConfirm }) => {
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ 
                                             display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
-                                            background: log.status?.toLowerCase() === 'sucesso' ? 'rgba(16, 185, 129, 0.1)' : 
-                                                        log.status?.toLowerCase() === 'falha_definitiva' ? 'rgba(245, 158, 11, 0.1)' :
-                                                        log.status?.toLowerCase() === 'erro' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                            color: log.status?.toLowerCase() === 'sucesso' ? '#34d399' : 
-                                                   log.status?.toLowerCase() === 'falha_definitiva' ? '#fbbf24' :
-                                                   log.status?.toLowerCase() === 'erro' ? '#f87171' : '#fbbf24'
+                                            background: statusLower === 'sucesso' ? 'rgba(16, 185, 129, 0.1)' : 
+                                                        statusLower === 'ignorado' ? 'rgba(167, 139, 250, 0.15)' :
+                                                        statusLower === 'falha_definitiva' ? 'rgba(245, 158, 11, 0.1)' :
+                                                        statusLower === 'erro' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                            color: statusLower === 'sucesso' ? '#34d399' : 
+                                                   statusLower === 'ignorado' ? '#a78bfa' :
+                                                   statusLower === 'falha_definitiva' ? '#fbbf24' :
+                                                   statusLower === 'erro' ? '#f87171' : '#fbbf24'
                                         }}>
-                                            {log.status?.toLowerCase() === 'sucesso' ? <CheckCircle2 size={12} /> : 
-                                             log.status?.toLowerCase() === 'falha_definitiva' ? <AlertCircle size={12} /> :
-                                             log.status?.toLowerCase() === 'erro' ? <XCircle size={12} /> : <RefreshCcw size={12} className="spin" />}
+                                            {statusLower === 'sucesso' ? <CheckCircle2 size={12} /> : 
+                                             statusLower === 'ignorado' ? <Info size={12} /> :
+                                             statusLower === 'falha_definitiva' ? <AlertCircle size={12} /> :
+                                             statusLower === 'erro' ? <XCircle size={12} /> : <RefreshCcw size={12} className="spin" />}
                                             {log.status?.toUpperCase()?.replace('_', ' ')}
                                         </div>
                                     </td>
@@ -303,7 +308,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
                                             {log.mensagem_corpo || '(Sem conteúdo)'}
                                         </div>
                                         {log.detalhes_erro && (
-                                            <div style={{ fontSize: '0.7rem', color: '#f87171', marginTop: '4px', fontStyle: 'italic', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log.detalhes_erro}>
+                                            <div style={{ fontSize: '0.7rem', color: statusLower === 'ignorado' ? '#a78bfa' : '#f87171', marginTop: '4px', fontStyle: 'italic', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log.detalhes_erro}>
                                                 {log.detalhes_erro}
                                             </div>
                                         )}

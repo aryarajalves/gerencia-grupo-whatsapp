@@ -38,7 +38,18 @@ const MessageList = ({
               (msg.message_content && msg.message_content.startsWith('[Status do Grupo:'));
 
             if (isStatusGrupo) {
-              const isFechar = msg.message_content && msg.message_content.includes('Fechado');
+              const content = msg.message_content || '';
+              const isFechar = content.includes('Fechado') || content.includes('fechado') || content.includes('somente admins');
+              const hasAdminsEdit = content.includes('Apenas Admins Editam') || content.includes('apenas admins podem editar') || content.includes('somente os dados do grupo');
+              const hasTodosEdit = content.includes('Todos Editam') || content.includes('todos os participantes podem editar');
+
+              let extraSettingsText = '';
+              if (hasAdminsEdit) {
+                extraSettingsText = ' • ⚙️ Configs: Apenas Admins';
+              } else if (hasTodosEdit) {
+                extraSettingsText = ' • ⚙️ Configs: Todos Editam';
+              }
+
               return (
                 <div
                   key={msg.id}
@@ -73,6 +84,7 @@ const MessageList = ({
                     <span style={{ fontSize: '0.85rem' }}>{isFechar ? '🔒' : '🔓'}</span>
                     <span>
                       {isFechar ? 'Grupo fechado — somente admins' : 'Grupo aberto — todos podem enviar'}
+                      {extraSettingsText}
                     </span>
                     <span style={{
                       fontSize: '0.65rem',

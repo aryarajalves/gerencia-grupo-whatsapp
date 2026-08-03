@@ -53,4 +53,34 @@ def test_montar_payload_status_grupo_com_texto_opcional():
     assert payload["adminOnlyMessage"] is False
     assert payload["_optional_text"] == "O grupo está aberto! Podem enviar dúvidas."
 
+def test_obter_configuracoes_atuais_grupo_preserva_settings():
+    from unittest.mock import patch, MagicMock
+    from services.message_service import obter_configuracoes_atuais_grupo
+
+    with patch("httpx.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"group": {"adminOnlySettings": True}}
+        mock_get.return_value = mock_resp
+
+        res = obter_configuracoes_atuais_grupo("120363123456@g.us", "inst123", {"Authorization": "Bearer tok"})
+        assert res is True
+
+class DummyMsgComAdminSettings:
+    tipo_de_mensagem = "status_grupo"
+    link_midia = "abrir"
+    mensagem = "abrir"
+    admin_only_settings = False
+
+def test_montar_payload_status_grupo_com_admin_settings_customizado():
+    grupo = DummyGrupo()
+    msg = DummyMsgComAdminSettings()
+    payload, tipo = montar_payload(grupo, msg)
+    assert tipo == "status_grupo"
+    assert payload["groupId"] == "120363123456@g.us"
+    assert payload["adminOnlyMessage"] is False
+    assert payload["_admin_only_settings"] is False
+
+
+
 

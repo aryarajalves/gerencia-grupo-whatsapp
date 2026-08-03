@@ -16,6 +16,7 @@ export const useScheduling = (onRefresh) => {
     link_midia: '',
     opcoes_enquete: '',
     enquete_multipla: false,
+    admin_only_settings: null,
     grupo_ids: []
   });
   const [editingId, setEditingId] = useState(null);
@@ -78,6 +79,7 @@ export const useScheduling = (onRefresh) => {
         link_midia: '',
         opcoes_enquete: '',
         enquete_multipla: false,
+        admin_only_settings: null,
         grupo_ids: []
       });
       setFile(null);
@@ -109,6 +111,7 @@ export const useScheduling = (onRefresh) => {
       link_midia: isStatus ? act : (m.link_midia || ''),
       opcoes_enquete: m.opcoes_enquete || '',
       enquete_multipla: m.enquete_multipla || false,
+      admin_only_settings: m.admin_only_settings !== undefined ? m.admin_only_settings : null,
       grupo_ids: m.grupo_ids || []
     });
     setPreviewUrl(m.link_midia);
@@ -127,6 +130,7 @@ export const useScheduling = (onRefresh) => {
       link_midia: '',
       opcoes_enquete: '',
       enquete_multipla: false,
+      admin_only_settings: null,
       grupo_ids: []
     });
     setFile(null);

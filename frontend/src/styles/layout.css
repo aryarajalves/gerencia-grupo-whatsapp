@@ -7,16 +7,15 @@
 .sidebar {
   width: 280px;
   background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   padding: 2rem 1rem;
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(20px);
   height: 100vh;
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 100;
-  box-shadow: 10px 0 30px rgba(0,0,0,0.2);
+  box-shadow: none;
 }
 
 .sidebar nav {
@@ -110,6 +109,9 @@
   flex: 1;
   padding: 2.25rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 h1 {

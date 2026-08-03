@@ -76,6 +76,7 @@ class MensagemDisparada(Base):
     link_midia = Column(String, nullable=True) # URL do S3/Upload
     opcoes_enquete = Column(Text, nullable=True) # Opções separadas por vírgula ou JSON
     enquete_multipla = Column(Boolean, default=False)
+    admin_only_settings = Column(Boolean, nullable=True) # None=Manter atual, True=Restringir aos admins, False=Liberar para todos
     status = Column(String, default="pendente")
     ativo = Column(Boolean, default=True)
 

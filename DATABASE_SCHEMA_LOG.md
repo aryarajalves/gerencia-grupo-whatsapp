@@ -55,3 +55,13 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
 - **Script de Migração:** `backend/scripts/add_tempo_digitando.py` e integrado em `backend/migrations.py`
 - **Descrição:** Permite configurar no grupo por quanto tempo o bot simula o status `composing` (digitando) via W-API antes do envio de cada mensagem.
 
+---
+
+### [2026-08-03] Permissão de Edição de Configurações do Grupo no Template Status/Abrir/Fechar
+- **Tabela Afetada:** `mensagens_disparadas`
+- **Coluna Adicionada:**
+  - `admin_only_settings` (BOOLEAN NULL) — Define se a alteração do status do grupo deve também ajustar a permissão de quem pode editar o grupo (`True`=Apenas admins, `False`=Todos os participantes, `NULL`=Manter estado atual)
+- **Script de Migração:** `backend/add_admin_only_settings_column.py`
+- **Descrição:** Permite definir individualmente por template se a ação de abrir/fechar o grupo vai também restringir ou liberar a edição das configurações do grupo no WhatsApp.
+
+

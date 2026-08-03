@@ -28,3 +28,5 @@ brain/
 # Docker & Temp
 *.log
 docker/data/
+backend/backups/
+

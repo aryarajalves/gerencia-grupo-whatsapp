@@ -81,7 +81,30 @@ def verificar_e_disparar_mensagens():
                     func.date(models.LogDisparo.criado_em) == hoje
                 ).first()
 
-                if ja_enviado: continue
+                if ja_enviado:
+                    # Verifica se já existe um log informando que o disparo foi ignorado hoje
+                    ja_logado_ignorado = db.query(models.LogDisparo).filter(
+                        models.LogDisparo.grupo_nome == grupo.nome,
+                        models.LogDisparo.status == "Ignorado",
+                        models.LogDisparo.mensagem_id == msg.id,
+                        func.date(models.LogDisparo.criado_em) == hoje
+                    ).first()
+                    
+                    if not ja_logado_ignorado:
+                        from services.message_service import registrar_log
+                        detalhes = f"Disparo não realizado: esta mensagem já foi disparada com sucesso para o grupo '{grupo.nome}' no dia de hoje ({ja_enviado.criado_em.strftime('%H:%M')})."
+                        registrar_log(
+                            db, 
+                            grupo.nome, 
+                            msg.mensagem or f"[{msg.tipo_de_mensagem.upper()}]", 
+                            "Ignorado", 
+                            detalhes, 
+                            msg_id=msg.id, 
+                            tipo=msg.tipo_de_mensagem,
+                            cliente_id=grupo.cliente_id
+                        )
+                        print(f"-> Disparo ignorado (já enviado hoje): {grupo.nome} ({msg.id})")
+                    continue
 
                 erros = db.query(models.LogDisparo).filter(
                     models.LogDisparo.grupo_nome == grupo.nome,

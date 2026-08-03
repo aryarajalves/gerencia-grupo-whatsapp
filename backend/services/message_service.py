@@ -109,6 +109,9 @@ def montar_payload(grupo, msg):
             "adminOnlyMessage": is_fechar,
             "_optional_text": optional_text
         }
+        if hasattr(msg, 'admin_only_settings') and msg.admin_only_settings is not None:
+            payload_custom["_admin_only_settings"] = msg.admin_only_settings
+
         return payload_custom, "status_grupo"
 
     else:
@@ -116,6 +119,32 @@ def montar_payload(grupo, msg):
 
     return base, tipo
 
+
+def obter_configuracoes_atuais_grupo(grupo_jid: str, instance_id: str, headers: dict):
+    """Consulta as configurações atuais do grupo na W-API para preservar adminOnlySettings ao alterar adminOnlyMessage."""
+    strategies = [
+        {"method": "GET", "url": f"{WAPI_BASE}/group/get-group-info", "params": {"instanceId": instance_id, "groupId": grupo_jid}},
+        {"method": "GET", "url": f"{WAPI_BASE}/group/get-group-info", "params": {"instanceId": instance_id, "groupJid": grupo_jid}},
+        {"method": "POST", "url": f"{WAPI_BASE}/group/get-group-info", "json": {"instanceId": instance_id, "groupId": grupo_jid}}
+    ]
+    for strategy in strategies:
+        try:
+            if strategy["method"] == "GET":
+                resp = httpx.get(strategy["url"], params=strategy.get("params"), headers=headers, timeout=10)
+            else:
+                resp = httpx.post(strategy["url"], json=strategy.get("json"), headers=headers, timeout=10)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                group_data = data.get("group") or data.get("data") or data
+                if isinstance(group_data, dict):
+                    admin_only_settings = group_data.get("adminOnlySettings")
+                    if admin_only_settings is not None:
+                        return bool(admin_only_settings)
+        except Exception as e:
+            logger.warning(f"Tentativa {strategy['method']} {strategy['url']} falhou para {grupo_jid}: {e}")
+    # Padrão de segurança: Apenas administradores editam as configurações do grupo (True)
+    return True
 
 def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number="Sistema"):
     """Envia a mensagem diretamente para o grupo via W-API."""
@@ -145,6 +174,13 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
     optional_text = ""
     if tipo == "status_grupo" and isinstance(payload, dict):
         optional_text = payload.pop("_optional_text", "")
+        custom_admin_settings = payload.pop("_admin_only_settings", None)
+        if custom_admin_settings is not None:
+            payload["adminOnlySettings"] = custom_admin_settings
+        else:
+            # Obtém a configuração atual de adminOnlySettings para enviar todos os campos obrigatórios exigidos pela W-API
+            admin_settings_atual = obter_configuracoes_atuais_grupo(grupo.id_do_grupo, instance_id, wapi_headers)
+            payload["adminOnlySettings"] = admin_settings_atual
 
     endpoint = ENDPOINT_MAP.get(tipo, "/message/send-text")
 
@@ -201,9 +237,21 @@ def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number
                     conteudo = f"[Nome do Grupo Alterado para: {conteudo}]"
                 elif tipo_m in ["status_grupo", "abrir_fechar_grupo"]:
                     val = (conteudo or "").lower().strip()
-                    is_fechar = ("fechar" in val or "close" in val or "fechado" in val or "announcement" in val)
+                    val_midia = (getattr(msg, 'link_midia', '') or '').lower().strip()
+                    if val_midia in ["fechar", "abrir"]:
+                        is_fechar = (val_midia == "fechar")
+                    else:
+                        is_fechar = ("fechar" in val or "close" in val or "fechado" in val or "announcement" in val)
                     acao_str = "Fechado (Apenas Admins)" if is_fechar else "Aberto (Todos enviam)"
-                    conteudo = f"[Status do Grupo: {acao_str}]"
+                    
+                    adm_settings = getattr(msg, 'admin_only_settings', None)
+                    settings_str = ""
+                    if adm_settings is True:
+                        settings_str = " | Configs: Apenas Admins Editam"
+                    elif adm_settings is False:
+                        settings_str = " | Configs: Todos Editam"
+
+                    conteudo = f"[Status do Grupo: {acao_str}{settings_str}]"
                     media_type = "status_grupo"
                 elif tipo_m == "enquete":
 

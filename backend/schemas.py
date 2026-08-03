@@ -68,6 +68,7 @@ class MensagemDisparadaBase(BaseModel):
     link_midia: Optional[str] = None
     opcoes_enquete: Optional[str] = None
     enquete_multipla: Optional[bool] = False
+    admin_only_settings: Optional[bool] = None
     status: str = "pendente"
     ativo: bool = True
     grupo_ids: List[uuid.UUID] = []
