@@ -209,6 +209,7 @@ def atualizar_contagem_contatos(db):
                     webhook_url = getattr(grupo, 'webhook_extracao_url', None)
                     grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
                     enviados_webhook_count = 0
+                    novos_contatos_count = 0
 
                     for p in participants:
                         try:
@@ -230,6 +231,7 @@ def atualizar_contagem_contatos(db):
                                 )
                                 db.add(contato_db)
                                 db.flush()
+                                novos_contatos_count += 1
                             else:
                                 if p_nome: contato_db.nome = p_nome
                                 contato_db.no_grupo = True
@@ -251,7 +253,7 @@ def atualizar_contagem_contatos(db):
                     log_sucesso = models.LogDisparo(
                         cliente_id=grupo.cliente_id,
                         grupo_nome=grupo.nome,
-                        mensagem_corpo=f"Extração de contatos realizada ({len(participants)} contatos encontrados, {len(novos_contatos)} novos)",
+                        mensagem_corpo=f"Extração de contatos realizada ({len(participants)} contatos encontrados, {novos_contatos_count} novos)",
                         status="SUCESSO",
                         tipo="extracao_contatos",
                         criado_em=agora
