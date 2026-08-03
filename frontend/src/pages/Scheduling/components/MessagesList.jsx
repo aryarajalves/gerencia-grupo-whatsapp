@@ -178,10 +178,16 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-              {groupedPageMessages[day].map(m => {
+              {groupedPageMessages[day].map((m, indexOnDay) => {
                 const cfg = TIPO_CONFIG[m.tipo_de_mensagem] || TIPO_CONFIG.texto;
                 const Icon = cfg.icon;
                 const isEditing = editingId === m.id;
+                
+                // Calcular o número sequencial da mensagem dentro do dia especifico
+                const allDayMessages = [...(mensagens || [])]
+                  .filter(item => item.dia_do_lancamento === day)
+                  .sort((a, b) => (a.horario_do_disparo || '').localeCompare(b.horario_do_disparo || ''));
+                const messageNumberOnDay = allDayMessages.findIndex(item => item.id === m.id) + 1;
                 
                 return (
                   <div key={m.id} className={`card ${isEditing ? 'editing-pulse' : ''}`} style={{ 
@@ -199,6 +205,17 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            background: 'rgba(255, 255, 255, 0.1)', 
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            color: '#fff', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 800, 
+                            padding: '2px 7px', 
+                            borderRadius: '6px' 
+                          }} title={`Mensagem ${messageNumberOnDay} do Dia ${day}`}>
+                            #{messageNumberOnDay}
+                          </span>
                           <div style={{ padding: '5px', borderRadius: '6px', background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}><Icon size={14} /></div>
                           <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: cfg.color, letterSpacing: '0.5px' }}>{cfg.label}</span>
                         </div>
