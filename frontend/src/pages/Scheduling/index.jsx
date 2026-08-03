@@ -13,8 +13,8 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
     novaMensagem, setNovaMensagem,
     editingId, processing,
     file, setFile, previewUrl, setPreviewUrl, uploadProgress,
-    handleFileChange, handleSubmit, startEdit, cancelEdit, handleDelete
-  } = useScheduling(onRefresh);
+    handleFileChange, handleSubmit, startEdit, openNewForm, cancelEdit, handleDelete
+  } = useScheduling(onRefresh, mensagens);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -150,9 +150,8 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
 
         <button
           onClick={() => {
-            if (activeSubTab === 'form' && editingId) cancelEdit();
-            else if (editingId) cancelEdit();
-            else setActiveSubTab('form');
+            if (editingId) cancelEdit();
+            openNewForm();
           }}
           style={{
             display: 'flex',
@@ -209,7 +208,10 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
           onDelete={handleDelete}
           openConfirm={openConfirm}
           editingId={editingId}
-          onOpenNewForm={() => { cancelEdit(); setActiveSubTab('form'); }}
+          onOpenNewForm={() => {
+            if (editingId) cancelEdit();
+            openNewForm();
+          }}
         />
       )}
 

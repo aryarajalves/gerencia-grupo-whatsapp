@@ -5,13 +5,20 @@ import { toastPlanoInsuficiente } from '../utils/toastPlano';
 import { toastDeletado } from '../utils/toastNotifications';
 import { useWaStatus } from '../contexts/WaStatusContext';
 
-export const useScheduling = (onRefresh) => {
+export const useScheduling = (onRefresh, mensagens = []) => {
   const { waStatus } = useWaStatus();
+
+  // Calcular o maior dia de lançamento entre as mensagens existentes
+  const getMaxDay = (msgs) => {
+    if (!msgs || msgs.length === 0) return 1;
+    return Math.max(...msgs.map(m => m.dia_do_lancamento || 1));
+  };
+
   const [activeSubTab, setActiveSubTab] = useState('list'); // 'list' | 'form'
   const [novaMensagem, setNovaMensagem] = useState({ 
     mensagem: '', 
     horario_do_disparo: '', 
-    dia_do_lancamento: 1, 
+    dia_do_lancamento: getMaxDay(mensagens), 
     tipo_de_mensagem: 'texto', 
     link_midia: '',
     opcoes_enquete: '',
@@ -74,7 +81,7 @@ export const useScheduling = (onRefresh) => {
       setNovaMensagem({ 
         mensagem: '', 
         horario_do_disparo: '', 
-        dia_do_lancamento: 1, 
+        dia_do_lancamento: getMaxDay(mensagens), 
         tipo_de_mensagem: 'texto', 
         link_midia: '',
         opcoes_enquete: '',
@@ -119,13 +126,30 @@ export const useScheduling = (onRefresh) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const openNewForm = () => {
+    setEditingId(null);
+    setNovaMensagem({ 
+      mensagem: '', 
+      horario_do_disparo: '', 
+      dia_do_lancamento: getMaxDay(mensagens), 
+      tipo_de_mensagem: 'texto', 
+      link_midia: '',
+      opcoes_enquete: '',
+      enquete_multipla: false,
+      admin_only_settings: null,
+      grupo_ids: []
+    });
+    setFile(null);
+    setPreviewUrl(null);
+    setActiveSubTab('form');
+  };
 
   const cancelEdit = () => {
     setEditingId(null);
     setNovaMensagem({ 
       mensagem: '', 
       horario_do_disparo: '', 
-      dia_do_lancamento: 1, 
+      dia_do_lancamento: getMaxDay(mensagens), 
       tipo_de_mensagem: 'texto', 
       link_midia: '',
       opcoes_enquete: '',
@@ -162,6 +186,6 @@ export const useScheduling = (onRefresh) => {
     novaMensagem, setNovaMensagem,
     editingId, processing,
     file, setFile, previewUrl, setPreviewUrl, uploadProgress,
-    handleFileChange, handleSubmit, startEdit, cancelEdit, handleDelete
+    handleFileChange, handleSubmit, startEdit, openNewForm, cancelEdit, handleDelete
   };
 };
