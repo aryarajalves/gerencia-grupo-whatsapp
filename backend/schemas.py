@@ -40,7 +40,12 @@ class GrupoWhatsAppBase(BaseModel):
     ultima_extracao_em: Optional[datetime] = None
     webhook_extracao_url: Optional[str] = None  # URL para receber novos contatos extraídos via POST
     tempo_digitando_segundos: int = 0  # 0=desabilitado, 1-60=segundos de simulação "digitando"
-
+    adms_permitidos: Optional[str] = None  # Números/JIDs dos administradores permitidos (separados por vírgula)
+    seguranca_adms_ativa: bool = False  # Toggle da Lista de Segurança de Admins
+    status_grupo_fechado: Optional[bool] = None  # True=Fechado, False=Aberto, None=Desconhecido
+    remover_impostor_msg: bool = True  # Se deve remover do grupo quem enviar msg não autorizada
+    msg_remocao_impostor: Optional[str] = None  # Template da mensagem de alerta (Ex: "🚫 [ALERTA] O participante @{numero}...")
+    numero_fantasma_ativo: bool = False  # Toggle de ativação do Número Fantasma neste grupo
 
 class GrupoWhatsAppCreate(GrupoWhatsAppBase):
     pass
@@ -49,14 +54,12 @@ class GrupoBulkDelete(BaseModel):
     grupo_ids: List[uuid.UUID]
 
 class GrupoWhatsApp(GrupoWhatsAppBase):
-
     id: uuid.UUID
     total_mensagens: int = 0
     tem_disparo_hoje: Optional[bool] = False
     total_disparos_hoje: Optional[int] = 0
 
     class Config:
-
         from_attributes = True
 
 class MensagemDisparadaBase(BaseModel):
@@ -69,12 +72,25 @@ class MensagemDisparadaBase(BaseModel):
     opcoes_enquete: Optional[str] = None
     enquete_multipla: Optional[bool] = False
     admin_only_settings: Optional[bool] = None
+    etiqueta: Optional[str] = None
     status: str = "pendente"
     ativo: bool = True
     grupo_ids: List[uuid.UUID] = []
 
 class MensagemDisparadaCreate(MensagemDisparadaBase):
     pass
+
+class MensagemBulkDelete(BaseModel):
+    ids: List[uuid.UUID]
+
+class MensagemBulkAssignGroups(BaseModel):
+    ids: List[uuid.UUID]
+    grupo_ids: List[uuid.UUID]
+
+class MensagemBulkDuplicate(BaseModel):
+    ids: List[uuid.UUID]
+    dia_do_lancamento: int
+    grupo_ids: List[uuid.UUID] = []
 
 class MensagemDisparada(MensagemDisparadaBase):
     id: uuid.UUID
@@ -168,6 +184,7 @@ class ContatoGrupo(BaseModel):
     jid_grupo: str
     nome_grupo: str
     no_grupo: bool = True
+    is_admin: bool = False
     extraido_em: datetime
     webhook_enviado: bool = False
     webhook_enviado_em: Optional[datetime] = None

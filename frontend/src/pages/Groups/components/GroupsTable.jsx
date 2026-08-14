@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, CalendarDays, Clock, Check, Copy, ListChecks, Pencil, PauseCircle, PlayCircle, Trash2, Repeat, Flag, AlertTriangle, Search, PlusCircle, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Users, CalendarDays, Clock, Check, Copy, ListChecks, Pencil, PauseCircle, PlayCircle, Trash2, Repeat, Flag, AlertTriangle, Search, PlusCircle, Filter, SlidersHorizontal, ChevronDown, Lock, LockOpen, HelpCircle } from 'lucide-react';
 import { DIAS_SEMANA } from '../../../utils/constants';
 
 const GroupsTable = ({ 
@@ -187,63 +187,59 @@ const GroupsTable = ({
           </select>
         </div>
 
-
-
-
-          {/* Seletor Exibir por Página */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-dim)', marginLeft: '8px' }}>
-            <span>Exibir:</span>
-            <select
-              value={itemsPerPage}
-              onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-              style={{
-                padding: '4px 8px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: '0.78rem',
-                cursor: 'pointer'
-              }}
-            >
-              <option value={20} style={{ background: '#161822' }}>20 / pág</option>
-              <option value={50} style={{ background: '#161822' }}>50 / pág</option>
-              <option value={100} style={{ background: '#161822' }}>100 / pág</option>
-              <option value={200} style={{ background: '#161822' }}>200 / pág</option>
-            </select>
-          </div>
-
-          {/* Botão Filtros Avançados */}
-          <button
-            onClick={() => setShowAdvancedFilters(prev => !prev)}
+        {/* Seletor Exibir por Página */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-dim)', marginLeft: '8px' }}>
+          <span>Exibir:</span>
+          <select
+            value={itemsPerPage}
+            onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '6px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 600,
-              background: showAdvancedFilters || activeAdvancedFiltersCount > 0
-                ? 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.2))'
-                : 'rgba(255,255,255,0.04)',
-              color: showAdvancedFilters || activeAdvancedFiltersCount > 0 ? '#fff' : 'var(--text-dim)',
-              border: `1px solid ${showAdvancedFilters || activeAdvancedFiltersCount > 0 ? 'rgba(124,58,237,0.5)' : 'var(--border)'}`,
-              cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: activeAdvancedFiltersCount > 0 ? '0 0 12px rgba(124,58,237,0.25)' : 'none'
+              padding: '4px 8px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '8px',
+              color: '#fff',
+              fontSize: '0.78rem',
+              cursor: 'pointer'
             }}
           >
-            <SlidersHorizontal size={14} style={{ color: activeAdvancedFiltersCount > 0 ? '#a855f7' : 'inherit' }} />
-            <span>Filtros Avançados</span>
-            {activeAdvancedFiltersCount > 0 && (
-              <span style={{
-                background: '#a855f7', color: '#fff', fontSize: '0.7rem',
-                borderRadius: '10px', padding: '1px 6px', fontWeight: 700
-              }}>
-                {activeAdvancedFiltersCount}
-              </span>
-            )}
-            <ChevronDown size={14} style={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-          </button>
+            <option value={20} style={{ background: '#161822' }}>20 / pág</option>
+            <option value={50} style={{ background: '#161822' }}>50 / pág</option>
+            <option value={100} style={{ background: '#161822' }}>100 / pág</option>
+            <option value={200} style={{ background: '#161822' }}>200 / pág</option>
+          </select>
         </div>
 
-      {/* Painel Expandível de Filtros Avançados */}
+        {/* Botão Filtros Avançados */}
+        <button
+          onClick={() => setShowAdvancedFilters(prev => !prev)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 14px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 600,
+            background: showAdvancedFilters || activeAdvancedFiltersCount > 0
+              ? 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.2))'
+              : 'rgba(255,255,255,0.04)',
+            color: showAdvancedFilters || activeAdvancedFiltersCount > 0 ? '#fff' : 'var(--text-dim)',
+            border: `1px solid ${showAdvancedFilters || activeAdvancedFiltersCount > 0 ? 'rgba(124,58,237,0.5)' : 'var(--border)'}`,
+            cursor: 'pointer', transition: 'all 0.2s',
+            boxShadow: activeAdvancedFiltersCount > 0 ? '0 0 12px rgba(124,58,237,0.25)' : 'none'
+          }}
+        >
+          <SlidersHorizontal size={14} style={{ color: activeAdvancedFiltersCount > 0 ? '#a855f7' : 'inherit' }} />
+          <span>Filtros Avançados</span>
+          {activeAdvancedFiltersCount > 0 && (
+            <span style={{
+              background: '#a855f7', color: '#fff', fontSize: '0.7rem',
+              borderRadius: '10px', padding: '1px 6px', fontWeight: 700
+            }}>
+              {activeAdvancedFiltersCount}
+            </span>
+          )}
+          <ChevronDown size={14} style={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+        </button>
+      </div>
 
+      {/* Painel Expandível de Filtros Avançados */}
       {showAdvancedFilters && (
         <div style={{
           padding: '1.25rem 1.5rem',
@@ -360,7 +356,6 @@ const GroupsTable = ({
           )}
         </div>
       )}
-
 
       {/* Barra de Ações em Massa */}
       {selectedGroupIds.length > 0 && (
@@ -519,11 +514,70 @@ const GroupsTable = ({
                         <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.25))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 700, color: 'var(--accent)' }}>{getGroupInitials(g.nome)}</div>
                         <div>
 
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           {g.nome}
                           {editingId === g.id && <span className="badge-warning">Editando</span>}
+                          
+                          {/* Badge de Status: Fechado para Admins vs Aberto vs Pendente */}
+                          {g.status_grupo_fechado === true ? (
+                            <span 
+                              title="Grupo Fechado: Apenas administradores podem enviar mensagens" 
+                              style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '3px', 
+                                fontSize: '0.68rem', 
+                                fontWeight: 700, 
+                                color: '#f87171', 
+                                background: 'rgba(239, 68, 68, 0.12)', 
+                                border: '1px solid rgba(239, 68, 68, 0.3)', 
+                                padding: '1px 6px', 
+                                borderRadius: '5px' 
+                              }}
+                            >
+                              <Lock size={10} /> Fechado (Só Admins)
+                            </span>
+                          ) : g.status_grupo_fechado === false ? (
+                            <span 
+                              title="Grupo Aberto: Todos os participantes podem enviar mensagens" 
+                              style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '3px', 
+                                fontSize: '0.68rem', 
+                                fontWeight: 700, 
+                                color: '#4ade80', 
+                                background: 'rgba(34, 197, 94, 0.12)', 
+                                border: '1px solid rgba(34, 197, 94, 0.3)', 
+                                padding: '1px 6px', 
+                                borderRadius: '5px' 
+                              }}
+                            >
+                              <LockOpen size={10} /> Aberto (Todos conversam)
+                            </span>
+                          ) : (
+                            <span 
+                              title="Aguardando primeira sincronização com a W-API para identificar se o grupo está aberto ou fechado" 
+                              style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '3px', 
+                                fontSize: '0.68rem', 
+                                fontWeight: 600, 
+                                color: '#94a3b8', 
+                                background: 'rgba(148, 163, 184, 0.1)', 
+                                border: '1px solid rgba(148, 163, 184, 0.25)', 
+                                padding: '1px 6px', 
+                                borderRadius: '5px' 
+                              }}
+                            >
+                              <HelpCircle size={10} /> Status: Pendente
+                            </span>
+                          )}
+
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                           {g.id_do_grupo}
                           {g.link_convite ? (
                             <span title="Link configurado" style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '2px' }}>
@@ -699,4 +753,3 @@ const GroupsTable = ({
 };
 
 export default GroupsTable;
-

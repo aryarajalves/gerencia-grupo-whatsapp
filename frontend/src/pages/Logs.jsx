@@ -2,27 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, Edit3, Image, Video, Mic, FileText, LayoutGrid, Lock,
   Search, Filter, CalendarDays, Trash2, RefreshCcw, ChevronDown, Clock, 
-  CheckCircle2, XCircle, AlertCircle, Info, Send, History as HistoryIcon, Users 
+  CheckCircle2, XCircle, AlertCircle, Info, Send, History as HistoryIcon, Users,
+  Ghost, ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import axiosInstance from '../services/api';
 import toast from 'react-hot-toast';
 
 const HistoricoEnvios = ({ openConfirm }) => {
   const TIPO_CONFIG = {
-    texto:             { label: 'Texto',            icon: MessageSquare, color: '#60a5fa' },
-    nome_grupo:        { label: 'Nome Grupo',      icon: Edit3,          color: '#f97316' },
-    status_grupo:      { label: 'Abrir/Fechar',    icon: Lock,           color: '#ec4899' },
-    imagem:            { label: 'Imagem',           icon: Image,          color: '#a78bfa' },
-    video:             { label: 'Vídeo',            icon: Video,          color: '#f472b6' },
-    audio:             { label: 'Áudio',            icon: Mic,            color: '#34d399' },
-    arquivo:           { label: 'PDF/Arquivo',      icon: FileText,       color: '#fbbf24' },
-    enquete:           { label: 'Enquete',          icon: LayoutGrid,     color: '#22d3ee' },
-    extracao_contatos: { label: 'Extração Contatos', icon: Users,          color: '#10b981' }
+    texto:                { label: 'Texto',               icon: MessageSquare, color: '#60a5fa' },
+    nome_grupo:           { label: 'Nome Grupo',         icon: Edit3,          color: '#f97316' },
+    status_grupo:         { label: 'Abrir/Fechar',       icon: Lock,           color: '#ec4899' },
+    imagem:               { label: 'Imagem',              icon: Image,          color: '#a78bfa' },
+    video:                { label: 'Vídeo',               icon: Video,          color: '#f472b6' },
+    audio:                { label: 'Áudio',               icon: Mic,            color: '#34d399' },
+    arquivo:              { label: 'PDF/Arquivo',         icon: FileText,       color: '#fbbf24' },
+    enquete:              { label: 'Enquete',             icon: LayoutGrid,     color: '#22d3ee' },
+    extracao_contatos:    { label: 'Extração Contatos',    icon: Users,          color: '#10b981' },
+    fantasma_pesca_leads: { label: 'Sentinela Fantasma',  icon: Ghost,          color: '#c084fc' },
+    seguranca_adm:        { label: 'Segurança Admins',    icon: ShieldAlert,    color: '#38bdf8' }
   };
 
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [gruposList, setGruposList] = useState([]);
+  const [filtroTipo, setFiltroTipo] = useState(''); // '' | 'disparos' | 'extracao' | 'seguranca' | 'fantasma'
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroGrupo, setFiltroGrupo] = useState('');
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
@@ -36,12 +41,25 @@ const HistoricoEnvios = ({ openConfirm }) => {
   const [totalSucesso, setTotalSucesso] = useState(0);
   const [totalErro, setTotalErro] = useState(0);
 
+  useEffect(() => {
+    const fetchGrupos = async () => {
+      try {
+        const res = await axiosInstance.get('/grupos/');
+        setGruposList(res.data || []);
+      } catch (err) {
+        console.error('Erro ao carregar grupos para filtro:', err);
+      }
+    };
+    fetchGrupos();
+  }, []);
+
   const fetchLogs = async () => {
     setLoading(true);
     try {
       const params = {
         limit: resultsPerPage,
         offset: (currentPage - 1) * resultsPerPage,
+        tipo: filtroTipo || undefined,
         status: filtroStatus || undefined,
         grupo: filtroGrupo || undefined,
         data_inicio: filtroDataInicio || undefined,
@@ -72,7 +90,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
       clearInterval(interval);
       window.removeEventListener('config-updated', handleConfigUpdated);
     };
-  }, [filtroStatus, filtroDataInicio, filtroDataFim, currentPage, resultsPerPage]); 
+  }, [filtroTipo, filtroStatus, filtroDataInicio, filtroDataFim, currentPage, resultsPerPage]); 
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -171,17 +189,75 @@ const HistoricoEnvios = ({ openConfirm }) => {
             </div>
         </div>
 
+        {/* Barra de Abas de Categorias do Histórico */}
+        <div style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            marginBottom: '1.25rem', 
+            overflowX: 'auto', 
+            paddingBottom: '4px',
+            borderBottom: '1px solid var(--border)'
+        }}>
+            {[
+                { id: '', label: 'Todos os Registros', icon: HistoryIcon, color: 'var(--primary)' },
+                { id: 'disparos', label: 'Mensagens & Disparos', icon: Send, color: '#60a5fa' },
+                { id: 'extracao', label: 'Extração de Leads', icon: Users, color: '#10b981' },
+                { id: 'seguranca', label: 'Segurança de Admins', icon: ShieldAlert, color: '#38bdf8' },
+                { id: 'fantasma', label: 'Sentinela Fantasma', icon: Ghost, color: '#c084fc' }
+            ].map(tab => {
+                const isSelected = filtroTipo === tab.id;
+                const TabIcon = tab.icon;
+                return (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                            setFiltroTipo(tab.id);
+                            setCurrentPage(1);
+                        }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '10px 18px',
+                            borderRadius: '10px',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap',
+                            background: isSelected ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.02)',
+                            color: isSelected ? '#fff' : 'var(--text-dim)',
+                            border: isSelected ? `1px solid ${tab.color}` : '1px solid var(--border)',
+                            boxShadow: isSelected ? `0 0 16px -4px ${tab.color}40` : 'none'
+                        }}
+                    >
+                        <TabIcon size={16} style={{ color: isSelected ? tab.color : 'var(--text-dim)' }} />
+                        {tab.label}
+                    </button>
+                );
+            })}
+        </div>
+
         <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-                    <input 
-                        type="text" 
-                        placeholder="Buscar por grupo..." 
-                        style={{ paddingLeft: '38px', height: '42px', width: '100%' }}
+                <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+                    <Users size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none' }} />
+                    <select 
+                        style={{ paddingLeft: '38px', height: '42px', width: '100%', cursor: 'pointer' }}
                         value={filtroGrupo}
-                        onChange={(e) => setFiltroGrupo(e.target.value)}
-                    />
+                        onChange={(e) => {
+                            setFiltroGrupo(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                    >
+                        <option value="">Todos os Grupos</option>
+                        {gruposList.map(g => (
+                            <option key={g.id || g.nome} value={g.nome} style={{ background: '#1c1e26' }}>
+                                {g.nome}
+                            </option>
+                        ))}
+                    </select>
                 </div>
                 <div style={{ width: '180px', position: 'relative' }}>
                     <Filter size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none' }} />
@@ -192,6 +268,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
                     >
                         <option value="">Todos Status</option>
                         <option value="sucesso">Sucesso</option>
+                        <option value="alerta">Alerta</option>
                         <option value="ignorado">Ignorado</option>
                         <option value="erro">Erro</option>
                         <option value="falha_definitiva">Falha Definitiva</option>
@@ -236,7 +313,7 @@ const HistoricoEnvios = ({ openConfirm }) => {
                 <button 
                     className="btn btn-secondary" 
                     style={{ height: '42px' }}
-                    onClick={() => { setFiltroStatus(''); setFiltroGrupo(''); setFiltroDataInicio(''); setFiltroDataFim(''); }}
+                    onClick={() => { setFiltroTipo(''); setFiltroStatus(''); setFiltroGrupo(''); setFiltroDataInicio(''); setFiltroDataFim(''); }}
                 >
                     Limpar
                 </button>
@@ -282,15 +359,18 @@ const HistoricoEnvios = ({ openConfirm }) => {
                                         <div style={{ 
                                             display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
                                             background: statusLower === 'sucesso' ? 'rgba(16, 185, 129, 0.1)' : 
+                                                        statusLower === 'alerta' ? 'rgba(168, 85, 247, 0.15)' :
                                                         statusLower === 'ignorado' ? 'rgba(167, 139, 250, 0.15)' :
                                                         statusLower === 'falha_definitiva' ? 'rgba(245, 158, 11, 0.1)' :
                                                         statusLower === 'erro' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
                                             color: statusLower === 'sucesso' ? '#34d399' : 
+                                                   statusLower === 'alerta' ? '#c084fc' :
                                                    statusLower === 'ignorado' ? '#a78bfa' :
                                                    statusLower === 'falha_definitiva' ? '#fbbf24' :
                                                    statusLower === 'erro' ? '#f87171' : '#fbbf24'
                                         }}>
                                             {statusLower === 'sucesso' ? <CheckCircle2 size={12} /> : 
+                                             statusLower === 'alerta' ? <AlertTriangle size={12} /> :
                                              statusLower === 'ignorado' ? <Info size={12} /> :
                                              statusLower === 'falha_definitiva' ? <AlertCircle size={12} /> :
                                              statusLower === 'erro' ? <XCircle size={12} /> : <RefreshCcw size={12} className="spin" />}
@@ -319,7 +399,10 @@ const HistoricoEnvios = ({ openConfirm }) => {
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                            {(log.status?.toLowerCase() === 'erro' || log.status?.toLowerCase() === 'falha_definitiva') && (
+                                            {(log.status?.toLowerCase() === 'erro' || log.status?.toLowerCase() === 'falha_definitiva') && 
+                                             !tipoKey.startsWith('seguranca') && 
+                                             tipoKey !== 'extracao_contatos' && 
+                                             tipoKey !== 'fantasma_pesca_leads' && (
                                                 <button 
                                                     className="btn-action-premium" 
                                                     title="Tentar Novamente"

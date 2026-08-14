@@ -8,6 +8,7 @@ import httpx
 import models, database, scheduler
 from database import get_db
 from s3_helper import upload_file_to_s3
+from services.security_service import processar_mensagem_seguranca_grupo
 
 router = APIRouter(tags=["Webhooks"])
 
@@ -109,6 +110,7 @@ async def persist_whatsapp_media(db: Session, media_data: dict, msg_root: dict =
 from client_context import get_active_client_id
 
 @router.post("/webhook/whatsapp")
+@router.post("/webhook/fantasma")
 async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
     try:
         data = await request.json()
@@ -120,6 +122,10 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
             cliente = db.query(models.Cliente).filter(models.Cliente.wapi_instance_id == str(instance_id), models.Cliente.ativo == True).first()
             if cliente:
                 cid = cliente.id
+            else:
+                cfg_ghost = db.query(models.Configuracao).filter(models.Configuracao.chave == "WAPI_FANTASMA_INSTANCE_ID", models.Configuracao.valor == str(instance_id)).first()
+                if cfg_ghost:
+                    cid = get_active_client_id(db)
         
         if not cid:
             cid = get_active_client_id(db)
@@ -235,6 +241,34 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
                         sender_number = msg.get("key", {}).get("participant") or remote_jid
 
                     sender_number = sender_number.split("@")[0].split(":")[0]
+
+                    # 🛡️ Validação de Segurança em Tempo Real para Grupo Fechado
+                    if is_group:
+                        try:
+                            processar_mensagem_seguranca_grupo(
+                                db=db,
+                                group_jid=remote_jid,
+                                sender_number=sender_number,
+                                sender_name=sender_name,
+                                message_id=message_id,
+                                cid=cid
+                            )
+                        except Exception as e_sec:
+                            print(f"ERRO AO PROCESSAR SEGURANÇA NO WEBHOOK: {e_sec}")
+                    else:
+                        # 👻 Validação de Número Fantasma (Mensagem privada de participante de grupo monitorado)
+                        try:
+                            from services.ghost_ai_service import processar_mensagem_privada_fantasma
+                            processar_mensagem_privada_fantasma(
+                                db=db,
+                                sender_number=sender_number,
+                                sender_name=sender_name,
+                                msg_body=msg_body,
+                                cid=cid,
+                                instance_id=instance_id
+                            )
+                        except Exception as e_ghost:
+                            print(f"ERRO AO PROCESSAR NÚMERO FANTASMA NO WEBHOOK: {e_ghost}")
                 else:
                     # Se foi enviada pelo próprio usuário (celular/painel), evita duplicata por message_id
                     if message_id:

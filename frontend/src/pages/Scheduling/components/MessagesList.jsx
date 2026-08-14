@@ -1,23 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Clock, CalendarDays, Pencil, Trash2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, Clock, Pencil, Trash2, Search, Tag, ChevronLeft, ChevronRight, CheckSquare, Square, Trash, Users, Copy } from 'lucide-react';
 import { TIPO_CONFIG } from '../../../utils/constants';
 import { ModalPortal } from '../../../components/common';
+import BulkAssignGroupsModal from './BulkAssignGroupsModal';
+import BulkDuplicateModal from './BulkDuplicateModal';
 
-const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onOpenNewForm }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeDay, setActiveDay] = useState('ALL');
+const MessagesList = ({
+  mensagens = [],
+  grupos = [],
+  searchTerm: externalSearchTerm,
+  setSearchTerm: externalSetSearchTerm,
+  activeDay: externalActiveDay,
+  setActiveDay: externalSetActiveDay,
+  activeTag: externalActiveTag,
+  setActiveTag: externalSetActiveTag,
+  onEdit,
+  onDelete,
+  onBulkDelete,
+  onBulkAssignGroups,
+  onBulkDuplicate,
+  openConfirm,
+  editingId,
+  onOpenNewForm
+}) => {
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const [internalActiveDay, setInternalActiveDay] = useState('ALL');
+  const [internalActiveTag, setInternalActiveTag] = useState('ALL');
+
+  const searchTerm = externalSearchTerm !== undefined ? externalSearchTerm : internalSearchTerm;
+  const setSearchTerm = externalSetSearchTerm || setInternalSearchTerm;
+
+  const activeDay = externalActiveDay !== undefined ? externalActiveDay : internalActiveDay;
+  const setActiveDay = externalSetActiveDay || setInternalSetActiveDay;
+
+  const activeTag = externalActiveTag !== undefined ? externalActiveTag : internalActiveTag;
+  const setActiveTag = externalSetActiveTag || setInternalSetActiveTag;
+
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [fullscreenMedia, setFullscreenMedia] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkGroupModalOpen, setIsBulkGroupModalOpen] = useState(false);
+  const [isBulkDuplicateModalOpen, setIsBulkDuplicateModalOpen] = useState(false);
 
   // Lista única e ordenada de todos os dias existentes
   const availableDays = [...new Set((mensagens || []).map(m => m.dia_do_lancamento))].sort((a, b) => a - b);
 
-  // Filtragem inicial por busca de texto e por aba selecionada
+  // Lista única e ordenada de todas as etiquetas existentes
+  const availableTags = [...new Set((mensagens || []).map(m => m.etiqueta).filter(Boolean))].sort();
+
+  // Filtragem inicial por busca de texto, por aba de dia e por etiqueta
   const filtered = (mensagens || []).filter(m => {
-    const matchesSearch = (m.mensagem || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (m.mensagem || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (m.etiqueta || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDay = activeDay === 'ALL' || m.dia_do_lancamento === parseInt(activeDay);
-    return matchesSearch && matchesDay;
+    const matchesTag = activeTag === 'ALL' || (m.etiqueta || '') === activeTag;
+    return matchesSearch && matchesDay && matchesTag;
   });
 
   // Ordenação consistente por Dia e por Horário de Disparo
@@ -28,18 +66,15 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
     return (a.horario_do_disparo || '').localeCompare(b.horario_do_disparo || '');
   });
 
-  // Resetar para página 1 quando alterar filtros ou tamanho da página
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, activeDay, pageSize]);
+  }, [searchTerm, activeDay, activeTag, pageSize]);
 
-  // Cálculo de paginação
   const totalItems = sortedMessages.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedMessages = sortedMessages.slice(startIndex, startIndex + pageSize);
 
-  // Agrupamento por dia dos itens da página atual
   const groupedPageMessages = paginatedMessages.reduce((acc, m) => {
     acc[m.dia_do_lancamento] = acc[m.dia_do_lancamento] || [];
     acc[m.dia_do_lancamento].push(m);
@@ -48,9 +83,51 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
 
   const daysOnCurrentPage = Object.keys(groupedPageMessages).map(Number).sort((a, b) => a - b);
 
+  // Manipulação de seleção
+  const toggleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(i => i !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const allFilteredIds = sortedMessages.map(m => m.id);
+    const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(allFilteredIds);
+    }
+  };
+
+  const handleExecuteBulkDelete = () => {
+    if (onBulkDelete) {
+      onBulkDelete(selectedIds, openConfirm, () => setSelectedIds([]));
+    }
+  };
+
+  const handleExecuteBulkAssignGroups = (grupoIds) => {
+    if (onBulkAssignGroups) {
+      onBulkAssignGroups(selectedIds, grupoIds, () => setSelectedIds([]));
+    }
+  };
+
+  const handleExecuteBulkDuplicate = (diaDoLancamento, grupoIds) => {
+    if (onBulkDuplicate) {
+      onBulkDuplicate(selectedIds, diaDoLancamento, grupoIds, () => setSelectedIds([]));
+    }
+  };
+
+  const maxDayInMessages = availableDays.length > 0 ? Math.max(...availableDays) : 1;
+
+  const isAllFilteredSelected = sortedMessages.length > 0 && sortedMessages.every(m => selectedIds.includes(m.id));
+
   return (
     <div className="fade-in">
-      {/* Modal Tela Cheia */}
+      {/* Modal Mídia Tela Cheia */}
       {fullscreenMedia && (
         <ModalPortal>
           <div 
@@ -74,17 +151,134 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
         </ModalPortal>
       )}
 
-      {/* Top Controls: Busca + Botão Novo Template */}
+      {/* Modal de Atribuição de Grupos */}
+      <BulkAssignGroupsModal 
+        isOpen={isBulkGroupModalOpen}
+        onClose={() => setIsBulkGroupModalOpen(false)}
+        grupos={grupos}
+        selectedCount={selectedIds.length}
+        onSave={handleExecuteBulkAssignGroups}
+      />
+
+      {/* Modal de Duplicação de Mensagens */}
+      <BulkDuplicateModal 
+        isOpen={isBulkDuplicateModalOpen}
+        onClose={() => setIsBulkDuplicateModalOpen(false)}
+        grupos={grupos}
+        selectedCount={selectedIds.length}
+        defaultDay={maxDayInMessages}
+        onSave={handleExecuteBulkDuplicate}
+      />
+
+      {/* Bar / Painel de Ações em Lote */}
+      {selectedIds.length > 0 && (
+        <div style={{
+          marginBottom: '1.25rem',
+          padding: '0.85rem 1.25rem',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(124, 58, 237, 0.15))',
+          border: '1px solid rgba(124, 58, 237, 0.4)',
+          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3), 0 0 15px rgba(124, 58, 237, 0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={handleSelectAll}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.82rem',
+                fontWeight: 600, cursor: 'pointer'
+              }}
+            >
+              {isAllFilteredSelected ? <CheckSquare size={16} style={{ color: '#a78bfa' }} /> : <Square size={16} />}
+              <span>{isAllFilteredSelected ? 'Desmarcar Todas' : `Selecionar Todas (${sortedMessages.length})`}</span>
+            </button>
+            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff' }}>
+              <span style={{ background: 'var(--primary)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.78rem', marginRight: '6px' }}>
+                {selectedIds.length}
+              </span>
+              mensagem(ns) selecionada(s)
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={() => setIsBulkDuplicateModalOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600,
+                cursor: 'pointer', background: 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(59,130,246,0.3))',
+                color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.4)'
+              }}
+            >
+              <Copy size={15} />
+              <span>Duplicar Selecionadas ({selectedIds.length})</span>
+            </button>
+
+            <button
+              onClick={() => setIsBulkGroupModalOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600,
+                cursor: 'pointer', background: 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(37,99,235,0.3))',
+                color: '#a78bfa', border: '1px solid rgba(167, 139, 250, 0.4)'
+              }}
+            >
+              <Users size={15} />
+              <span>Atribuir Grupos</span>
+            </button>
+
+            <button
+              onClick={handleExecuteBulkDelete}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600,
+                cursor: 'pointer', background: 'rgba(239, 68, 68, 0.2)',
+                color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.4)'
+              }}
+            >
+              <Trash size={15} />
+              <span>Excluir Selecionadas ({selectedIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Top Controls: Busca + Selecionar Todos + Botão Novo Template */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar texto da mensagem..." 
-            value={searchTerm} 
-            onChange={e => setSearchTerm(e.target.value)} 
-            style={{ paddingLeft: '38px', width: '100%', height: '40px' }} 
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px' }}>
+          <button
+            onClick={handleSelectAll}
+            title={isAllFilteredSelected ? "Desmarcar todas as mensagens" : "Selecionar todas as mensagens filtradas"}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '0 12px', height: '40px', borderRadius: '10px',
+              background: isAllFilteredSelected ? 'rgba(124, 58, 237, 0.2)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${isAllFilteredSelected ? 'rgba(167, 139, 250, 0.4)' : 'var(--border)'}`,
+              color: isAllFilteredSelected ? '#a78bfa' : 'var(--text-dim)',
+              fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
+            }}
+          >
+            {isAllFilteredSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+            <span>{isAllFilteredSelected ? 'Desmarcar' : 'Selecionar Todas'}</span>
+          </button>
+
+          <div style={{ flex: 1, position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <input 
+              type="text" 
+              placeholder="Buscar texto ou etiqueta..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              style={{ paddingLeft: '38px', width: '100%', height: '40px' }} 
+            />
+          </div>
         </div>
 
         {onOpenNewForm && (
@@ -98,29 +292,61 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
         )}
       </div>
 
+      {/* Filtro por Etiquetas (Pills) */}
+      <div style={{ 
+        display: 'flex', alignItems: 'center', gap: '8px', 
+        overflowX: 'auto', paddingBottom: '8px', marginBottom: '1rem', scrollbarWidth: 'thin'
+      }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px', paddingRight: '4px' }}>
+          <Tag size={12} /> Etiqueta:
+        </span>
+        <button
+          onClick={() => setActiveTag('ALL')}
+          style={{
+            padding: '6px 14px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+            border: activeTag === 'ALL' ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+            background: activeTag === 'ALL' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.03)',
+            color: activeTag === 'ALL' ? '#60a5fa' : 'var(--text-dim)', transition: 'all 0.2s ease'
+          }}
+        >
+          Todas as Etiquetas
+        </button>
+
+        {availableTags.map(tag => {
+          const countForTag = (mensagens || []).filter(m => m.etiqueta === tag).length;
+          const isActive = activeTag === tag;
+          return (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(tag)}
+              style={{
+                padding: '6px 14px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                border: isActive ? '1px solid #f43f5e' : '1px solid rgba(244,63,94,0.3)',
+                background: isActive ? 'rgba(244,63,94,0.25)' : 'rgba(244,63,94,0.08)',
+                color: isActive ? '#fda4af' : '#f43f5e', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <span>🏷️ {tag}</span>
+              <span style={{ background: isActive ? '#f43f5e' : 'rgba(255,255,255,0.1)', color: '#fff', padding: '1px 6px', borderRadius: '10px', fontSize: '0.68rem' }}>
+                {countForTag}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Navegação por Abas de Dias */}
       <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px', 
-        overflowX: 'auto', 
-        paddingBottom: '8px', 
-        marginBottom: '1.5rem',
-        scrollbarWidth: 'thin'
+        display: 'flex', alignItems: 'center', gap: '8px', 
+        overflowX: 'auto', paddingBottom: '8px', marginBottom: '1.5rem', scrollbarWidth: 'thin'
       }}>
         <button
           onClick={() => setActiveDay('ALL')}
           style={{
-            padding: '8px 16px',
-            borderRadius: '10px',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
+            padding: '8px 16px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
             border: activeDay === 'ALL' ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)',
             background: activeDay === 'ALL' ? 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.3))' : 'rgba(255,255,255,0.03)',
-            color: activeDay === 'ALL' ? '#fff' : 'var(--text-dim)',
-            transition: 'all 0.2s ease',
+            color: activeDay === 'ALL' ? '#fff' : 'var(--text-dim)', transition: 'all 0.2s ease',
             boxShadow: activeDay === 'ALL' ? '0 0 15px rgba(37,99,235,0.2)' : 'none'
           }}
         >
@@ -135,30 +361,15 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
               key={day}
               onClick={() => setActiveDay(String(day))}
               style={{
-                padding: '8px 16px',
-                borderRadius: '10px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                padding: '8px 16px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                 border: isActive ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)',
                 background: isActive ? 'linear-gradient(135deg, rgba(37,99,235,0.3), rgba(124,58,237,0.3))' : 'rgba(255,255,255,0.03)',
-                color: isActive ? '#fff' : 'var(--text-dim)',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
+                color: isActive ? '#fff' : 'var(--text-dim)', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px',
                 boxShadow: isActive ? '0 0 15px rgba(37,99,235,0.2)' : 'none'
               }}
             >
               <span>DIA {String(day).padStart(2, '0')}</span>
-              <span style={{ 
-                background: isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)', 
-                color: '#fff', 
-                padding: '1px 6px', 
-                borderRadius: '10px', 
-                fontSize: '0.7rem' 
-              }}>
+              <span style={{ background: isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)', color: '#fff', padding: '1px 6px', borderRadius: '10px', fontSize: '0.7rem' }}>
                 {countForDay}
               </span>
             </button>
@@ -178,57 +389,85 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-              {groupedPageMessages[day].map((m, indexOnDay) => {
+              {groupedPageMessages[day].map((m) => {
                 const cfg = TIPO_CONFIG[m.tipo_de_mensagem] || TIPO_CONFIG.texto;
                 const Icon = cfg.icon;
                 const isEditing = editingId === m.id;
+                const isSelected = selectedIds.includes(m.id);
                 
-                // Calcular o número sequencial da mensagem dentro do dia especifico
                 const allDayMessages = [...(mensagens || [])]
                   .filter(item => item.dia_do_lancamento === day)
                   .sort((a, b) => (a.horario_do_disparo || '').localeCompare(b.horario_do_disparo || ''));
                 const messageNumberOnDay = allDayMessages.findIndex(item => item.id === m.id) + 1;
                 
                 return (
-                  <div key={m.id} className={`card ${isEditing ? 'editing-pulse' : ''}`} style={{ 
-                    padding: '1rem', 
-                    border: isEditing ? '2px solid var(--primary)' : `1px solid ${cfg.border || 'var(--border)'}`, 
-                    background: `linear-gradient(135deg, ${cfg.bg}, rgba(255,255,255,0.02))`, 
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    minHeight: '180px',
-                    boxShadow: isEditing ? `0 0 30px ${cfg.bg}` : 'none',
-                    transition: 'all 0.3s ease'
-                  }}>
+                  <div 
+                    key={m.id} 
+                    className={`card ${isEditing ? 'editing-pulse' : ''}`} 
+                    style={{ 
+                      padding: '1rem', 
+                      border: isSelected 
+                        ? '2px solid rgba(167, 139, 250, 0.8)' 
+                        : isEditing 
+                          ? '2px solid var(--primary)' 
+                          : `1px solid ${cfg.border || 'var(--border)'}`, 
+                      background: isSelected
+                        ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.18), rgba(37, 99, 235, 0.12))'
+                        : `linear-gradient(135deg, ${cfg.bg}, rgba(255,255,255,0.02))`, 
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '180px',
+                      boxShadow: isSelected ? '0 0 20px rgba(124, 58, 237, 0.25)' : isEditing ? `0 0 30px ${cfg.bg}` : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {/* Checkbox de Seleção */}
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar mensagem ${messageNumberOnDay}`}
+                            checked={isSelected}
+                            onChange={() => toggleSelect(m.id)}
+                            style={{
+                              width: '18px', height: '18px', cursor: 'pointer',
+                              accentColor: '#8b5cf6', flexShrink: 0
+                            }}
+                          />
                           <span style={{ 
                             background: 'rgba(255, 255, 255, 0.1)', 
                             border: '1px solid rgba(255, 255, 255, 0.15)',
-                            color: '#fff', 
-                            fontSize: '0.75rem', 
-                            fontWeight: 800, 
-                            padding: '2px 7px', 
-                            borderRadius: '6px' 
+                            color: '#fff', fontSize: '0.75rem', fontWeight: 800, 
+                            padding: '2px 7px', borderRadius: '6px' 
                           }} title={`Mensagem ${messageNumberOnDay} do Dia ${day}`}>
                             #{messageNumberOnDay}
                           </span>
                           <div style={{ padding: '5px', borderRadius: '6px', background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}><Icon size={14} /></div>
                           <span style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: cfg.color, letterSpacing: '0.5px' }}>{cfg.label}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
-                          <Clock size={12} /> {String(m.horario_do_disparo || '').slice(0, 5)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
+                            <Clock size={12} /> {String(m.horario_do_disparo || '').slice(0, 5)}
+                          </div>
+                          {m.etiqueta && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '2px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: 700,
+                              background: 'rgba(244, 63, 94, 0.15)', color: '#fda4af',
+                              border: '1px solid rgba(244, 63, 94, 0.3)', backdropFilter: 'blur(4px)'
+                            }}>
+                              🏷️ {m.etiqueta}
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <div style={{ 
-                        fontSize: '0.9rem', 
-                        color: m.mensagem ? 'var(--text-main)' : 'var(--text-dim)', 
-                        lineHeight: '1.4', 
-                        marginBottom: '0.75rem', 
+                        fontSize: '0.9rem', color: m.mensagem ? 'var(--text-main)' : 'var(--text-dim)', 
+                        lineHeight: '1.4', marginBottom: '0.75rem', 
                         fontStyle: m.tipo_de_mensagem === 'nome_grupo' ? 'italic' : 'normal',
                         fontWeight: m.tipo_de_mensagem === 'nome_grupo' ? 600 : 400
                       }}>
@@ -309,29 +548,19 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
       {/* Bar de Paginação */}
       {totalItems > 0 && (
         <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justify: 'space-between', 
-          marginTop: '2rem', 
-          paddingTop: '1.25rem', 
-          borderTop: '1px solid var(--border)',
-          flexWrap: 'wrap',
-          gap: '1rem'
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+          marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)',
+          flexWrap: 'wrap', gap: '1rem'
         }}>
-          {/* Seletor de quantidade por página */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
             <span>Mostrar</span>
             <select
               value={pageSize}
               onChange={e => setPageSize(Number(e.target.value))}
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-main)',
-                padding: '4px 10px',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                cursor: 'pointer'
+                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                color: 'var(--text-main)', padding: '4px 10px', borderRadius: '8px',
+                fontSize: '0.85rem', cursor: 'pointer'
               }}
             >
               <option value={20}>20 por página</option>
@@ -342,20 +571,14 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
             <span>de {totalItems} mensagens</span>
           </div>
 
-          {/* Controles da paginação */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="btn btn-secondary"
               style={{
-                padding: '6px 12px',
-                height: '34px',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                opacity: currentPage === 1 ? 0.4 : 1,
+                padding: '6px 12px', height: '34px', fontSize: '0.8rem', display: 'flex',
+                alignItems: 'center', gap: '4px', opacity: currentPage === 1 ? 0.4 : 1,
                 cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
               }}
             >
@@ -371,13 +594,8 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
               disabled={currentPage >= totalPages}
               className="btn btn-secondary"
               style={{
-                padding: '6px 12px',
-                height: '34px',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                opacity: currentPage >= totalPages ? 0.4 : 1,
+                padding: '6px 12px', height: '34px', fontSize: '0.8rem', display: 'flex',
+                alignItems: 'center', gap: '4px', opacity: currentPage >= totalPages ? 0.4 : 1,
                 cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer'
               }}
             >
@@ -386,9 +604,17 @@ const MessagesList = ({ mensagens, onEdit, onDelete, openConfirm, editingId, onO
           </div>
         </div>
       )}
+
+      {/* Modal de Atribuição de Grupos em Lote */}
+      <BulkAssignGroupsModal
+        isOpen={isBulkGroupModalOpen}
+        onClose={() => setIsBulkGroupModalOpen(false)}
+        grupos={grupos}
+        selectedCount={selectedIds.length}
+        onSave={handleExecuteBulkAssignGroups}
+      />
     </div>
   );
 };
 
 export default MessagesList;
-

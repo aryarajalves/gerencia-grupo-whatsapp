@@ -69,82 +69,40 @@
 
 ## 5. Planos LITE vs PRO
 
-- O sistema detecta o plano atual da W-API automaticamente a cada 60 segundos.
-- Funcionalidades exclusivas PRO conhecidas até agora:
-  - Revogar/apagar mensagem para todos (`/captura/revogar/{id}`)
-- O frontend exibe o plano atual (badge PRO/LITE) no sidebar do chat.
-- Ao tentar usar recurso PRO com plano LITE, o sistema exibe um toast customizado (âmbar/dourado com cadeado).
+- O sistema suporta dois tipos de plano da W-API: `LITE` e `PRO`.
+- A detecção do plano é feita automaticamente pelo `sync_service.py` consultando `instance/list-instances`. O valor é persistido na chave `WHATSAPP_PLAN_TYPE` da tabela `configuracoes`.
+- O frontend consulta `/whatsapp/status` a cada 60 segundos e mantém `waStatus.plan_type` atualizado.
 
-**[RESPONDIDO] Upgrade de plano:** Feito diretamente no painel da W-API pelo usuário. O sistema detecta o plano automaticamente via `/instance/list-instances` a cada 60 segundos.
-
-**[RESPONDIDO] Endpoints PRO usados neste projeto:**
-
-Segundo a documentação oficial da W-API (https://docs.w-api.app/lite-vs-pro), a regra geral é:
-- **LITE:** envio de mensagens básicas (texto, imagem, vídeo, áudio, documento, enquete) e webhooks.
-- **PRO:** qualquer endpoint de gerenciamento de grupos + mensagens interativas (botões e listas).
-
-Mapeamento dos endpoints do projeto:
-
-| Endpoint | Usado em | Plano |
-|----------|----------|-------|
-| `/message/send-text` | Disparo de texto | ✅ LITE |
-| `/message/send-image` | Disparo de imagem | ✅ LITE |
-| `/message/send-video` | Disparo de vídeo | ✅ LITE |
-| `/message/send-audio` | Disparo de áudio | ✅ LITE |
-| `/message/send-document` | Disparo de documento | ✅ LITE |
-| `/message/send-poll` | Disparo de enquete | 🔒 PRO |
-| `/message/download-media` | Captura de mídia via webhook | ✅ LITE |
-| `/message/delete` | Revogar mensagem | 🔒 PRO |
-| `/instance/status-instance` | Verificar conexão | ✅ LITE |
-| `/instance/list-instances` | Detectar plano | ✅ LITE |
-| `/group/get-all-groups` | Listar grupos para cadastro | ✅ LITE |
-| `/group/get-participants` | Contar contatos do grupo | ✅ LITE |
-| `/group/get-invite-code` | Obter link de convite | ✅ LITE |
-| `/group/update-group-name` | Alterar nome do grupo | 🔒 PRO |
-
-**Regra geral confirmada em uso:** Endpoints de **leitura** de grupos funcionam no LITE. Endpoints de **escrita** (criar, renomear, gerenciar membros) são exclusivos PRO. Mensagens interativas (botões, listas) também são PRO.
+**Restrições por plano:**
+- Recursos exclusivos do plano **PRO** devem ser bloqueados no backend com `403` e `detail="PRO_REQUIRED::<descrição>"`.
+- O frontend captura o erro e exibe o toast estilizado via `toastPlanoInsuficiente()`.
+- Exemplos de recursos exclusivos PRO:
+  - Revogar/apagar mensagem para todos (`/captura/revogar/:id`)
+  - Outros endpoints identificados na doc oficial da W-API como PRO.
 
 ---
 
 ## 6. Usuários e Permissões
 
-- Existem dois cargos: `SUPER_ADMIN` e `ADMIN`.
-- `SUPER_ADMIN`: acesso total (usuários, convites, configurações do sistema).
-- `ADMIN`: acesso operacional (grupos, mensagens, logs, contatos, chat) — sem acesso a usuários e configurações.
-- Novos usuários só podem ser criados via convite gerado por um `SUPER_ADMIN`.
-- Convites têm expiração configurável (em horas) e são de uso único.
-
-**[RESPONDIDO] Limite de usuários:** Não há limite de usuários por conta no momento.
-
-**[RESPONDIDO] Visibilidade de dados:** Todos os dados são compartilhados entre os usuários — um ADMIN vê tudo, incluindo dados criados por outros ADMINs.
-
-**[RESPONDIDO] Cargos futuros:** Apenas `SUPER_ADMIN` e `ADMIN` por enquanto. Nenhum novo cargo planejado.
+- O sistema possui dois cargos: `SUPER_ADMIN` e `ADMIN`.
+- Apenas `SUPER_ADMIN` pode gerenciar outros usuários, alterar plano e acessar configurações críticas.
+- `ADMIN` opera grupos, mensagens e funnels do dia a dia.
 
 ---
 
-## 7. Captura de Mensagens (Webhook)
+## 7. Captura de Mensagens e Mídia
 
-- O sistema só captura mensagens de grupos (`@g.us`), ignora chats 1:1.
-- Mídias são descriptografadas pela W-API e salvas permanentemente no S3.
-- Contatos que enviam mensagens em grupos são automaticamente adicionados à base de contatos.
-
-**[RESPONDIDO] Retenção de mensagens capturadas:** Deve ser configurável pelo admin nas Configurações via dropdown com as opções: 7 dias, 14 dias, 30 dias ou Ilimitado. Atualmente não existe essa lógica — precisa ser implementada (ver `MELHORIAS.md`).
-
-**[RESPONDIDO] Política de privacidade:** Não há política definida no momento.
-
-**[RESPONDIDO] Captura de mensagens do bot:** O webhook NÃO deve capturar mensagens enviadas pelo próprio bot (`from_me: true`). Apenas mensagens enviadas por membros do grupo devem ser armazenadas.
+- Mensagens recebidas via webhook da W-API são persistidas na tabela `mensagens_capturadas`.
+- Mídias (imagem, vídeo, áudio, documento) são baixadas via W-API (`/message/download-media`), descriptografadas e enviadas para o bucket S3 configurado.
+- Mensagens enviadas pelo próprio painel são registradas com `from_me=True` e não duplicadas no chat.
 
 ---
 
-## 8. Upload de Mídia
+## 8. Webhook de Extração de Contatos
 
-- Limite de 16MB por arquivo.
-- Áudio gravado no browser (webm) é convertido para ogg antes do upload (compatibilidade W-API).
-- Todos os arquivos são armazenados no Backblaze B2 (S3 compatível).
-
-**[RESPONDIDO] Limpeza do S3:** Deve seguir o mesmo período configurado em `RETENCAO_MENSAGENS_DIAS`. Quando o job de retenção deletar mensagens capturadas do banco, deve também deletar os arquivos de mídia correspondentes do S3.
-
-**[RESPONDIDO] Arquivos proibidos:** Não há restrição de tipo de arquivo além do limite de 16MB.
+- Cada grupo pode ter uma URL de webhook externa configurada em `webhook_extracao_url`.
+- Durante a extração periódica de contatos, novos contatos inseridos são enviados via `POST` com `{nome, numero, grupo, grupo_jid, extraido_em}`.
+- O campo `webhook_enviado` na tabela `contatos_grupos` garante que nenhum contato seja enviado mais de uma vez para o webhook.
 
 ---
 
@@ -172,21 +130,6 @@ Mapeamento dos endpoints do projeto:
 - Toda comparação de horário no scheduler (ex: janela de disparo, meia-noite de avanço de ciclo) deve usar o horário de Brasília como referência.
 - O banco de dados pode armazenar datas em UTC, mas a conversão para exibição e comparação deve sempre usar `America/Sao_Paulo`.
 
-**Implementação no backend (Python):**
-```python
-from zoneinfo import ZoneInfo
-from datetime import datetime
-
-BRASILIA = ZoneInfo("America/Sao_Paulo")
-agora_brasilia = datetime.now(BRASILIA)
-```
-
-**Implementação no frontend (JavaScript):**
-```javascript
-const formatarDataBrasilia = (isoString) =>
-  new Date(isoString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-```
-
 ---
 
 ## 11. Ambiente e Conectividade (BASE_URL)
@@ -195,3 +138,17 @@ const formatarDataBrasilia = (isoString) =>
 - **Proibição de localhost:** É terminantemente proibido o uso de `localhost` para links gerados que serão enviados a leads. Se a variável `BASE_URL` estiver configurada no ambiente, ela tem precedência total sobre qualquer detecção automática de `window.location.origin`.
 - **Túneis e Produção:** Em ambientes que utilizam túneis (Ngrok, Cloudflare) ou domínios de produção, a `BASE_URL` deve refletir o endereço externo acessível pelo lead (ex: `https://zapgrupo.aryaraj.shop`).
 - **Exposição via API:** O backend deve expor o valor da `BASE_URL` do ambiente via endpoint `/config/` para que o frontend apresente os links de cópia corretos ao administrador.
+
+---
+
+## 12. Lista de Segurança e Mitigação em Grupo Fechado
+
+- **Validação de Grupo Fechado:** Um grupo só aplica a restrição de administradores quando estiver com `status_grupo_fechado == True` (somente administradores podem enviar mensagens no WhatsApp) E `seguranca_adms_ativa == True`. Se o grupo estiver aberto para todos, a lista de segurança não bloqueia membros comuns.
+- **Detecção de Mensagem Não Autorizada:** Se qualquer participante cujo número não conste na lista de `adms_permitidos` enviar uma mensagem em grupo fechado com segurança ativa:
+  1. **Revogação/Deleção:** A mensagem do participante é apagada para todos via `/message/delete` (se plano PRO).
+  2. **Remoção do Grupo:** Se configurado "Remover e Alertar", o participante é removido do grupo via W-API (`DELETE /group/remove-participant`).
+  3. **Aviso no Grupo:** O bot dispara uma mensagem pré-pronta no grupo informando o número do participante removido/alertado e o motivo.
+  4. **Log de Auditoria:** É gravado um registro em `LogDisparo` com o tipo `seguranca_impostor_msg` e detalhes das ações tomadas.
+- **Detecção de Novo Administrador na Sincronização:** Quando a lista de participantes é sincronizada e um novo administrador é identificado em grupo fechado sem constar na lista de segurança:
+  1. **Apenas Registro de Alerta:** O sistema registra um log de auditoria do tipo `seguranca_adm` no histórico de logs informando o ocorrido.
+  2. **Sem Ações Destrutivas:** O sistema NÃO remove nem rebaixa o participante do grupo no WhatsApp, pois o novo administrador pode ser um usuário legítimo promovido pela equipe.

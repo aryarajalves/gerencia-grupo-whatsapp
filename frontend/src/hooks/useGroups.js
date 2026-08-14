@@ -13,7 +13,13 @@ const initialGroupState = {
   tipo_ciclo: 'semanal',
   extrair_contatos: true,
   intervalo_extracao_minutos: 30,
-  webhook_extracao_url: ''
+  webhook_extracao_url: '',
+  tempo_digitando_segundos: 0,
+  adms_permitidos: '',
+  seguranca_adms_ativa: false,
+  remover_impostor_msg: true,
+  msg_remocao_impostor: '',
+  numero_fantasma_ativo: false
 };
 
 export const useGroups = (onRefresh, setGrupos, openConfirm) => {
@@ -79,8 +85,6 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
     
     try {
       await axiosInstance.patch(`/grupos/${id}/toggle`);
-      // No need to refresh immediately if we updated locally
-      // but we do it anyway to sync with server just in case
       onRefresh();
     } catch (error) {
       // Revert on error
@@ -135,7 +139,13 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
       tipo_ciclo: grupo.tipo_ciclo || 'semanal',
       extrair_contatos: grupo.extrair_contatos !== undefined ? grupo.extrair_contatos : true,
       intervalo_extracao_minutos: grupo.intervalo_extracao_minutos || 30,
-      webhook_extracao_url: grupo.webhook_extracao_url || ''
+      webhook_extracao_url: grupo.webhook_extracao_url || '',
+      tempo_digitando_segundos: grupo.tempo_digitando_segundos || 0,
+      adms_permitidos: grupo.adms_permitidos || '',
+      seguranca_adms_ativa: grupo.seguranca_adms_ativa !== undefined ? Boolean(grupo.seguranca_adms_ativa) : false,
+      remover_impostor_msg: grupo.remover_impostor_msg !== undefined ? Boolean(grupo.remover_impostor_msg) : true,
+      msg_remocao_impostor: grupo.msg_remocao_impostor || '',
+      numero_fantasma_ativo: grupo.numero_fantasma_ativo !== undefined ? Boolean(grupo.numero_fantasma_ativo) : false
     });
     setActiveSubTab('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -293,4 +303,3 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
     toggleSelectGroup, toggleSelectAll, clearSelection, finalizeBulkDelete
   };
 };
-

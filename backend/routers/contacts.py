@@ -18,6 +18,7 @@ def listar_contatos(
     search: Optional[str] = None,
     jid_grupo: Optional[str] = None,
     no_grupo: Optional[bool] = None,
+    is_admin: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     cid = get_active_client_id(db)
@@ -30,6 +31,9 @@ def listar_contatos(
     
     if no_grupo is not None:
         query = query.filter(models.ContatoGrupo.no_grupo == no_grupo)
+
+    if is_admin is not None:
+        query = query.filter(models.ContatoGrupo.is_admin == is_admin)
     
     if search:
         search_filter = f"%{search}%"
@@ -85,6 +89,7 @@ def exportar_contatos(
     search: Optional[str] = None,
     jid_grupo: Optional[str] = None,
     no_grupo: Optional[bool] = None,
+    is_admin: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     from fastapi.responses import StreamingResponse
@@ -101,6 +106,9 @@ def exportar_contatos(
     
     if no_grupo is not None:
         query = query.filter(models.ContatoGrupo.no_grupo == no_grupo)
+
+    if is_admin is not None:
+        query = query.filter(models.ContatoGrupo.is_admin == is_admin)
     
     if search:
         search_filter = f"%{search}%"
@@ -118,7 +126,7 @@ def exportar_contatos(
     writer = csv.writer(output)
     
     # Header
-    writer.writerow(["Nome", "Numero/ID", "Grupo", "Status no Grupo", "JID Grupo", "Extraído em"])
+    writer.writerow(["Nome", "Numero/ID", "Grupo", "Cargo no Grupo", "Status no Grupo", "JID Grupo", "Extraído em"])
     
     # Data
     for c in contacts:
@@ -126,6 +134,7 @@ def exportar_contatos(
             c.nome or "Sem Nome",
             c.numero,
             c.nome_grupo,
+            "Admin" if c.is_admin else "Membro",
             "No Grupo" if c.no_grupo else "Saiu do Grupo",
             c.jid_grupo,
             c.extraido_em.strftime("%Y-%m-%d %H:%M:%S")

@@ -60,7 +60,12 @@ class GrupoWhatsApp(Base):
     ultima_extracao_em = Column(DateTime, nullable=True)
     webhook_extracao_url = Column(String, nullable=True)  # URL para envio de novos contatos extraídos
     tempo_digitando_segundos = Column(Integer, default=0)  # 0=desabilitado, 1-60=segundos de simulação "digitando"
-
+    adms_permitidos = Column(Text, nullable=True)  # Números de telefone/JIDs dos admins permitidos (separados por vírgula)
+    seguranca_adms_ativa = Column(Boolean, default=False)  # Toggle para ativar/desativar a lista de segurança de adms
+    status_grupo_fechado = Column(Boolean, nullable=True)  # True=Apenas adms enviam msgs (fechado), False=Todos enviam (aberto)
+    remover_impostor_msg = Column(Boolean, default=True)  # Se deve remover do grupo quem enviar msg não autorizada
+    msg_remocao_impostor = Column(Text, nullable=True)  # Template da mensagem de alerta (Ex: "🚫 [ALERTA] O participante @{numero}...")
+    numero_fantasma_ativo = Column(Boolean, default=False)  # Toggle para ativar/desativar monitoramento do número fantasma neste grupo
 
 
 class MensagemDisparada(Base):
@@ -77,6 +82,7 @@ class MensagemDisparada(Base):
     opcoes_enquete = Column(Text, nullable=True) # Opções separadas por vírgula ou JSON
     enquete_multipla = Column(Boolean, default=False)
     admin_only_settings = Column(Boolean, nullable=True) # None=Manter atual, True=Restringir aos admins, False=Liberar para todos
+    etiqueta = Column(String(50), nullable=True)
     status = Column(String, default="pendente")
     ativo = Column(Boolean, default=True)
 
@@ -168,6 +174,7 @@ class ContatoGrupo(Base):
     jid_grupo = Column(String)
     nome_grupo = Column(String)
     no_grupo = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
     extraido_em = Column(DateTime, default=get_br_time)
     webhook_enviado = Column(Boolean, default=False)
     webhook_enviado_em = Column(DateTime, nullable=True)
@@ -205,4 +212,3 @@ class Invitation(Base):
     usado = Column(Boolean, default=False)
     expira_em = Column(DateTime, nullable=True) # NULL = Ilimitado
     criado_em = Column(DateTime, default=get_br_time)
-

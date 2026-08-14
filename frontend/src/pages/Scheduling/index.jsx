@@ -10,10 +10,14 @@ import { toast } from 'react-hot-toast';
 const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
   const {
     activeSubTab, setActiveSubTab,
+    searchTerm, setSearchTerm,
+    activeDay, setActiveDay,
+    activeTag, setActiveTag,
     novaMensagem, setNovaMensagem,
     editingId, processing,
     file, setFile, previewUrl, setPreviewUrl, uploadProgress,
-    handleFileChange, handleSubmit, startEdit, openNewForm, cancelEdit, handleDelete
+    handleFileChange, handleSubmit, startEdit, openNewForm, cancelEdit, handleDelete,
+    handleBulkDelete, handleBulkAssignGroups, handleBulkDuplicate
   } = useScheduling(onRefresh, mensagens);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -200,12 +204,23 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
           uploadProgress={uploadProgress}
           handleFileChange={handleFileChange}
           grupos={grupos || []}
+          mensagens={mensagens || []}
         />
       ) : (
         <MessagesList 
           mensagens={mensagens}
+          grupos={grupos || []}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          activeDay={activeDay}
+          setActiveDay={setActiveDay}
+          activeTag={activeTag}
+          setActiveTag={setActiveTag}
           onEdit={startEdit}
           onDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
+          onBulkAssignGroups={handleBulkAssignGroups}
+          onBulkDuplicate={handleBulkDuplicate}
           openConfirm={openConfirm}
           editingId={editingId}
           onOpenNewForm={() => {

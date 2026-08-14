@@ -125,6 +125,11 @@ def sync_database():
             conn.execute(text("ALTER TABLE mensagens_disparadas ADD COLUMN admin_only_settings BOOLEAN;"))
             conn.commit()
 
+        if 'etiqueta' not in columns:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'etiqueta' em 'mensagens_disparadas'...")
+            conn.execute(text("ALTER TABLE mensagens_disparadas ADD COLUMN etiqueta VARCHAR(50);"))
+            conn.commit()
+
         columns_grupos = [c['name'] for c in inspector.get_columns('grupos_whatsapp')]
         if 'ativo' not in columns_grupos:
             logger.info("[BANCO DE DADOS] Adicionando coluna 'ativo' em 'grupos_whatsapp'...")
@@ -176,6 +181,36 @@ def sync_database():
             conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN tempo_digitando_segundos INTEGER DEFAULT 0;"))
             conn.commit()
 
+        if 'adms_permitidos' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'adms_permitidos' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN adms_permitidos TEXT;"))
+            conn.commit()
+
+        if 'seguranca_adms_ativa' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'seguranca_adms_ativa' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN seguranca_adms_ativa BOOLEAN DEFAULT FALSE;"))
+            conn.commit()
+
+        if 'status_grupo_fechado' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'status_grupo_fechado' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN status_grupo_fechado BOOLEAN;"))
+            conn.commit()
+
+        if 'remover_impostor_msg' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'remover_impostor_msg' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN remover_impostor_msg BOOLEAN DEFAULT TRUE;"))
+            conn.commit()
+
+        if 'msg_remocao_impostor' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'msg_remocao_impostor' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN msg_remocao_impostor TEXT;"))
+            conn.commit()
+
+        if 'numero_fantasma_ativo' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'numero_fantasma_ativo' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN numero_fantasma_ativo BOOLEAN DEFAULT FALSE;"))
+            conn.commit()
+
         if inspector.has_table('usuarios'):
             columns_users = [c['name'] for c in inspector.get_columns('usuarios')]
             if 'senha_hash' not in columns_users:
@@ -194,6 +229,10 @@ def sync_database():
                 logger.info("[BANCO DE DADOS] Adicionando coluna 'tipo' em 'logs_disparos'...")
                 conn.execute(text("ALTER TABLE logs_disparos ADD COLUMN tipo TEXT;"))
                 conn.commit()
+
+            # Converte status de logs de segurança/fantasma de ERRO para ALERTA
+            conn.execute(text("UPDATE logs_disparos SET status = 'ALERTA' WHERE tipo IN ('seguranca_adm', 'seguranca_impostor_msg', 'fantasma_pesca_leads') AND status = 'ERRO';"))
+            conn.commit()
 
         if inspector.has_table('mensagens_capturadas'):
             columns_capturas = [c['name'] for c in inspector.get_columns('mensagens_capturadas')]
@@ -238,5 +277,12 @@ def sync_database():
                     logger.info(f"[BANCO DE DADOS] Convertendo 'cliente_id' em '{table_name}' para o tipo UUID...")
                     conn.execute(text(f"ALTER TABLE {table_name} ALTER COLUMN cliente_id TYPE UUID USING cliente_id::uuid;"))
                     conn.commit()
+
+        if inspector.has_table('contatos_grupos'):
+            columns_contatos = [c['name'] for c in inspector.get_columns('contatos_grupos')]
+            if 'is_admin' not in columns_contatos:
+                logger.info("[BANCO DE DADOS] Adicionando coluna 'is_admin' em 'contatos_grupos'...")
+                conn.execute(text("ALTER TABLE contatos_grupos ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;"))
+                conn.commit()
 
     logger.info("[BANCO DE DADOS] Sincronização Concluída com Sucesso.")

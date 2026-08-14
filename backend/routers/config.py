@@ -24,6 +24,12 @@ def get_config(db: Session = Depends(get_db)):
         res["WAPI_TOKEN"] = os.getenv("WAPI_TOKEN", "")
     if "WAPI_INSTANCE_ID" not in res or not res["WAPI_INSTANCE_ID"]:
         res["WAPI_INSTANCE_ID"] = os.getenv("WAPI_INSTANCE_ID", "")
+    if "WAPI_FANTASMA_TOKEN" not in res or not res["WAPI_FANTASMA_TOKEN"]:
+        res["WAPI_FANTASMA_TOKEN"] = os.getenv("WAPI_FANTASMA_TOKEN", "")
+    if "WAPI_FANTASMA_INSTANCE_ID" not in res or not res["WAPI_FANTASMA_INSTANCE_ID"]:
+        res["WAPI_FANTASMA_INSTANCE_ID"] = os.getenv("WAPI_FANTASMA_INSTANCE_ID", "")
+    if "WAPI_FANTASMA_NUMERO" not in res or not res["WAPI_FANTASMA_NUMERO"]:
+        res["WAPI_FANTASMA_NUMERO"] = os.getenv("WAPI_FANTASMA_NUMERO", "")
     return res
 
 import uuid

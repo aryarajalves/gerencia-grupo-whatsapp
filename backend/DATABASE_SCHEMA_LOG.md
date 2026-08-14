@@ -16,3 +16,4 @@
 
 | 2026-05-09 | configuracoes | SILENCE_HOURS_ENABLED, SILENCE_HOURS_START, SILENCE_HOURS_END | add_silence_hours.py | Adição de configurações de horário de silêncio |
 | 2026-07-31 | clientes | Criação da tabela clientes para gerenciamento de múltiplas contas/instâncias de WhatsApp | `scripts/add_clientes_table.py` |
+| 2026-08-11 | mensagens_disparadas | Adição da coluna `etiqueta` (VARCHAR(50) NULL) | `migrations.py` |

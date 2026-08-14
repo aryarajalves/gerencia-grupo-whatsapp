@@ -7,7 +7,7 @@ services:
   # BACKEND - FastAPI (API REST)
   # =============================================================
   backend:
-    image: aryalvesfernandes/gerenciador-grupo:backend-1.0.0
+    image: aryalvesfernandes/gerenciador-grupo:backend-1.0.5
     environment:
 
       # --- Banco de Dados ---
@@ -78,7 +78,7 @@ services:
   # WORKER - Agendador de Tarefas (Disparos e Sincronização)
   # =============================================================
   worker:
-    image: aryalvesfernandes/gerenciador-grupo:backend-1.0.0
+    image: aryalvesfernandes/gerenciador-grupo:backend-1.0.5
     command: python worker.py
     environment:
       - DATABASE_URL=postgresql://postgres:35cb19b8-13cd-4f02-af3e-abdcdd373ae5@postgres:5432/zapgroup
@@ -99,7 +99,7 @@ services:
   # FRONTEND - React (Interface Web)
   # =============================================================
   frontend:
-    image: aryalvesfernandes/gerenciador-grupo:frontend-1.0.0
+    image: aryalvesfernandes/gerenciador-grupo:frontend-1.0.5
     environment:
 
       # --- Banco de Dados (referência, não usado diretamente pelo frontend em runtime) ---

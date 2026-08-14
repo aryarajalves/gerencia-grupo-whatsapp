@@ -4,6 +4,15 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
 
 ---
 
+### [2026-08-14] Ativação de Número Fantasma por Grupo
+- **Tabela Afetada:** `grupos_whatsapp`
+- **Coluna Adicionada:**
+  - `numero_fantasma_ativo` (BOOLEAN DEFAULT FALSE) — Toggle para ativar ou desativar o monitoramento pelo Número Fantasma para o grupo específico.
+- **Script de Migração:** `backend/scripts/add_numero_fantasma_grupo_column.py` e integrado em `backend/migrations.py`.
+- **Descrição:** Permite que o monitoramento do Número Fantasma seja ligado ou desligado individualmente em cada grupo.
+
+---
+
 ### [2026-08-01] Migração de Multi-Tenancy (Isolamento por Cliente)
 - **Tabelas Afetadas:**
   - `grupos_whatsapp`
@@ -62,6 +71,34 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
 - **Coluna Adicionada:**
   - `admin_only_settings` (BOOLEAN NULL) — Define se a alteração do status do grupo deve também ajustar a permissão de quem pode editar o grupo (`True`=Apenas admins, `False`=Todos os participantes, `NULL`=Manter estado atual)
 - **Script de Migração:** `backend/add_admin_only_settings_column.py`
-- **Descrição:** Permite definir individualmente por template se a ação de abrir/fechar o grupo vai também restringir ou liberar a edição das configurações do grupo no WhatsApp.
 
+---
 
+### [2026-08-11] Suporte a Etiqueta / Tag em Mensagens Disparadas
+- **Tabela Afetada:** `mensagens_disparadas`
+- **Coluna Adicionada:**
+  - `etiqueta` (VARCHAR(50) NULL) — Identificador textual/etiqueta opcional para categorizar a mensagem (Ex: Oferta, Lembrete, Conteúdo)
+- **Script de Migração:** Integrado em `backend/migrations.py`
+- **Descrição:** Permite associar uma etiqueta/tag às mensagens agendadas e realizar filtragens dinâmicas no Roteiro de Mensagens.
+
+---
+
+### [2026-08-11] Identificação de Cargo do Participante (Admin vs Membro)
+- **Tabela Afetada:** `contatos_grupos`
+- **Coluna Adicionada:**
+  - `is_admin` (BOOLEAN DEFAULT FALSE) — Indica se o contato é administrador ou superadministrador do grupo no WhatsApp
+- **Script de Migração:** Integrado em `backend/migrations.py`
+- **Descrição:** Permite identificar se o contato extraído é administrador do grupo, filtrá-lo no backend/frontend e exportar seu cargo no CSV.
+
+---
+
+### [2026-08-13] Lista de Segurança, Status Fechado e Remoção Automática de Impostores
+- **Tabela Afetada:** `grupos_whatsapp`
+- **Colunas Adicionadas:**
+  - `adms_permitidos` (TEXT NULL) — Lista de números ou JIDs dos administradores autorizados do grupo (separados por vírgula)
+  - `seguranca_adms_ativa` (BOOLEAN DEFAULT FALSE) — Toggle que liga/desliga a proteção da lista de segurança por grupo
+  - `status_grupo_fechado` (BOOLEAN NULL) — Armazena o estado atual do grupo (True=Apenas admins enviam msgs [fechado], False=Todos enviam msgs [aberto])
+  - `remover_impostor_msg` (BOOLEAN DEFAULT TRUE) — Define se participantes não autorizados que enviem mensagens com o grupo fechado devem ser removidos
+  - `msg_remocao_impostor` (TEXT NULL) — Template customizável de aviso enviado no grupo após a remoção (suporta a tag `{numero}`)
+- **Script de Migração:** Integrado em `backend/migrations.py`
+- **Descrição:** Em grupos fechados com segurança ativa, mensagens enviadas por quem não está na lista de admins disparam a deleção da mensagem, remoção do participante da sala, envio de alerta no grupo e log de auditoria.

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, RefreshCcw, UserCircle, Download, ChevronDown, XCircle, CheckCircle2, Trash2, Upload } from 'lucide-react';
+import { Users, Search, RefreshCcw, UserCircle, Download, ChevronDown, XCircle, CheckCircle2, Trash2, Upload, Webhook } from 'lucide-react';
 import axiosInstance from '../services/api';
 import { toastDeletado, toastSucesso } from '../utils/toastNotifications';
 import ImportContactsModal from './Contacts/components/ImportContactsModal';
@@ -13,6 +13,7 @@ const Contacts = ({ openConfirm }) => {
     const [search, setSearch] = useState('');
     const [groupFilter, setGroupFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [roleFilter, setRoleFilter] = useState('all');
     const [totalContacts, setTotalContacts] = useState(0);
     const [stats, setStats] = useState({ total_contatos: 0, total_grupos: 0 });
     const [currentPage, setCurrentPage] = useState(1);
@@ -25,17 +26,44 @@ const Contacts = ({ openConfirm }) => {
         setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
     };
 
+    const [isSelectingAllFiltered, setIsSelectingAllFiltered] = useState(false);
+
     const toggleSelect = (id) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
     };
 
-    const toggleSelectAll = () => {
+    const toggleSelectPage = () => {
         const pageIds = contacts.map(c => c.id);
-        const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
-        if (allSelected) {
+        const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
+        if (allPageSelected) {
             setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+            setIsSelectingAllFiltered(false);
         } else {
             setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
+        }
+    };
+
+    const handleSelectAllFiltered = async () => {
+        setLoading(true);
+        try {
+            const params = {
+                limit: 10000,
+                skip: 0,
+                search: search || undefined,
+                jid_grupo: groupFilter || undefined,
+                no_grupo: statusFilter === 'all' ? undefined : (statusFilter === 'in'),
+                is_admin: roleFilter === 'all' ? undefined : (roleFilter === 'admin')
+            };
+            const res = await axiosInstance.get('/contatos/', { params });
+            const allIds = (res.data.items || []).map(c => c.id);
+            setSelectedIds(allIds);
+            setIsSelectingAllFiltered(true);
+            showToast(`${allIds.length} contato(s) selecionados no total!`, 'success');
+        } catch (error) {
+            console.error('Erro ao selecionar todos os contatos:', error);
+            showToast('Erro ao selecionar todos os contatos', 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -95,7 +123,8 @@ const Contacts = ({ openConfirm }) => {
                 skip: (currentPage - 1) * resultsPerPage,
                 search: search || undefined,
                 jid_grupo: groupFilter || undefined,
-                no_grupo: statusFilter === 'all' ? undefined : (statusFilter === 'in')
+                no_grupo: statusFilter === 'all' ? undefined : (statusFilter === 'in'),
+                is_admin: roleFilter === 'all' ? undefined : (roleFilter === 'admin')
             };
             const [res, resStats] = await Promise.all([
                 axiosInstance.get('/contatos/', { params }),
@@ -118,7 +147,8 @@ const Contacts = ({ openConfirm }) => {
             const params = {
                 search: search || undefined,
                 jid_grupo: groupFilter || undefined,
-                no_grupo: statusFilter === 'all' ? undefined : (statusFilter === 'in')
+                no_grupo: statusFilter === 'all' ? undefined : (statusFilter === 'in'),
+                is_admin: roleFilter === 'all' ? undefined : (roleFilter === 'admin')
             };
             const response = await axiosInstance.get('/contatos/export', { 
                 params, 
@@ -157,7 +187,7 @@ const Contacts = ({ openConfirm }) => {
             fetchContacts();
         }, 500);
         return () => clearTimeout(timeout);
-    }, [search, groupFilter, statusFilter, resultsPerPage]);
+    }, [search, groupFilter, statusFilter, roleFilter, resultsPerPage]);
 
     useEffect(() => {
         fetchContacts();
@@ -222,6 +252,55 @@ const Contacts = ({ openConfirm }) => {
                         </select>
                     </div>
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: '10px', border: '1px solid var(--border)', minWidth: '150px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>Cargo:</span>
+                        <select 
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value)}
+                            style={{ 
+                                background: 'transparent', border: 'none', color: '#fff', fontSize: '0.85rem', 
+                                fontWeight: 600, cursor: 'pointer', outline: 'none', padding: '4px', width: '100%'
+                            }}
+                        >
+                            <option value="all" style={{ background: '#1c1e26' }}>Todos</option>
+                            <option value="admin" style={{ background: '#1c1e26' }}>👑 Admins</option>
+                            <option value="member" style={{ background: '#1c1e26' }}>Membros</option>
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: '10px', border: '1px solid var(--border)', minWidth: '160px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>Status:</span>
+                        <select 
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            style={{ 
+                                background: 'transparent', border: 'none', color: '#fff', fontSize: '0.85rem', 
+                                fontWeight: 600, cursor: 'pointer', outline: 'none', padding: '4px', width: '100%'
+                            }}
+                        >
+                            <option value="all" style={{ background: '#1c1e26' }}>Todos</option>
+                            <option value="in" style={{ background: '#1c1e26' }}>No Grupo</option>
+                            <option value="out" style={{ background: '#1c1e26' }}>Saiu do Grupo</option>
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: '10px', border: '1px solid var(--border)', minWidth: '180px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>Grupo:</span>
+                        <select 
+                            value={groupFilter}
+                            onChange={(e) => setGroupFilter(e.target.value)}
+                            style={{ 
+                                background: 'transparent', border: 'none', color: '#fff', fontSize: '0.85rem', 
+                                fontWeight: 600, cursor: 'pointer', outline: 'none', padding: '4px', width: '100%'
+                            }}
+                        >
+                            <option value="" style={{ background: '#1c1e26' }}>Todos os Grupos</option>
+                            {groups.map(g => (
+                                <option key={g.jid_grupo} value={g.jid_grupo} style={{ background: '#1c1e26' }}>{g.nome_grupo}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: '10px', border: '1px solid var(--border)', minWidth: '160px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>Status:</span>
                         <select 
@@ -258,6 +337,22 @@ const Contacts = ({ openConfirm }) => {
                             <option value={500} style={{ background: '#1c1e26' }}>500</option>
                         </select>
                     </div>
+
+                    <button 
+                        className="btn btn-secondary" 
+                        style={{ 
+                            height: '42px', 
+                            gap: '8px', 
+                            padding: '0 1.25rem',
+                            background: isSelectingAllFiltered ? 'rgba(37,99,235,0.2)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${isSelectingAllFiltered ? 'rgba(37,99,235,0.4)' : 'var(--border)'}`,
+                            color: isSelectingAllFiltered ? '#60a5fa' : 'var(--text-main)'
+                        }}
+                        onClick={isSelectingAllFiltered ? () => { setSelectedIds([]); setIsSelectingAllFiltered(false); } : handleSelectAllFiltered}
+                    >
+                        <CheckCircle2 size={16} style={{ color: isSelectingAllFiltered ? '#60a5fa' : 'var(--primary)' }} />
+                        {isSelectingAllFiltered ? `Desmarcar Todos (${selectedIds.length})` : `Selecionar Todos (${totalContacts})`}
+                    </button>
 
                     {selectedIds.length > 0 && (
                         <button 
@@ -311,6 +406,49 @@ const Contacts = ({ openConfirm }) => {
                 }}
             />
 
+            {/* Banner de seleção total de contatos */}
+            {selectedIds.length > 0 && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 18px',
+                    borderRadius: '12px',
+                    marginBottom: '1rem',
+                    background: 'linear-gradient(135deg, rgba(37,99,235,0.15), rgba(124,58,237,0.15))',
+                    border: '1px solid rgba(37,99,235,0.3)',
+                    fontSize: '0.88rem',
+                    color: '#fff'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <CheckCircle2 size={18} style={{ color: '#60a5fa' }} />
+                        <span>
+                            Você possui <strong>{selectedIds.length}</strong> contato(s) selecionado(s) 
+                            {selectedIds.length >= totalContacts && totalContacts > 0 ? ' (TODOS os contatos da base/filtro) ' : ` nesta lista.`}
+                        </span>
+                    </div>
+                    {selectedIds.length < totalContacts && (
+                        <button
+                            type="button"
+                            onClick={handleSelectAllFiltered}
+                            style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                color: '#fff',
+                                padding: '5px 12px',
+                                borderRadius: '8px',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Selecionar TODOS os {totalContacts} contatos da base
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
@@ -321,14 +459,16 @@ const Contacts = ({ openConfirm }) => {
                                     <input 
                                         type="checkbox" 
                                         checked={contacts.length > 0 && contacts.every(c => selectedIds.includes(c.id))}
-                                        onChange={toggleSelectAll}
+                                        onChange={toggleSelectPage}
                                         style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                                     />
                                 </th>
                                 <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Contato</th>
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Número / ID</th>
+                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Cargo</th>
                                 <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Grupo de Origem</th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Presença</th>
+                                 <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Presença</th>
+                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>ZapVoice (Webhook)</th>
                                 <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Extraído em</th>
                                 <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Ações</th>
                             </tr>
@@ -355,6 +495,27 @@ const Contacts = ({ openConfirm }) => {
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>{contact.numero}</div>
                                     </td>
+                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                        {contact.is_admin ? (
+                                            <div style={{ 
+                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                padding: '4px 10px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 800,
+                                                background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)',
+                                                color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.5px'
+                                            }}>
+                                                👑 ADMIN
+                                            </div>
+                                        ) : (
+                                            <div style={{ 
+                                                display: 'inline-flex', alignItems: 'center',
+                                                padding: '4px 10px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 600,
+                                                background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border)',
+                                                color: 'var(--text-dim)', textTransform: 'uppercase'
+                                            }}>
+                                                MEMBRO
+                                            </div>
+                                        )}
+                                    </td>
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ fontWeight: 500, fontSize: '0.85rem', color: '#fff' }}>{contact.nome_grupo}</div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{contact.jid_grupo}</div>
@@ -370,6 +531,37 @@ const Contacts = ({ openConfirm }) => {
                                             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: contact.no_grupo ? '#10b981' : '#ef4444' }}></div>
                                             {contact.no_grupo ? 'No Grupo' : 'Saiu'}
                                         </div>
+                                    </td>
+                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                        {contact.webhook_enviado ? (
+                                            <div title={contact.webhook_enviado_em ? `Enviado em: ${new Date(contact.webhook_enviado_em).toLocaleString('pt-BR')}` : 'Enviado com sucesso'} style={{ 
+                                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                                padding: '4px 10px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 700,
+                                                background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)',
+                                                color: '#60a5fa', textTransform: 'uppercase'
+                                            }}>
+                                                <Webhook size={11} />
+                                                ENVIADO
+                                            </div>
+                                        ) : contact.is_admin ? (
+                                            <div title="Admins são ignorados no envio do webhook" style={{ 
+                                                display: 'inline-flex', alignItems: 'center',
+                                                padding: '4px 8px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 600,
+                                                background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border)',
+                                                color: 'var(--text-dim)', textTransform: 'uppercase'
+                                            }}>
+                                                IGNORADO (ADMIN)
+                                            </div>
+                                        ) : (
+                                            <div style={{ 
+                                                display: 'inline-flex', alignItems: 'center',
+                                                padding: '4px 8px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 600,
+                                                background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border)',
+                                                color: 'var(--text-dim)', textTransform: 'uppercase'
+                                            }}>
+                                                PENDENTE
+                                            </div>
+                                        )}
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                                         <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 500 }}>{new Date(contact.extraido_em).toLocaleDateString('pt-BR')}</div>

@@ -15,6 +15,10 @@ export const useScheduling = (onRefresh, mensagens = []) => {
   };
 
   const [activeSubTab, setActiveSubTab] = useState('list'); // 'list' | 'form'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeDay, setActiveDay] = useState('ALL');
+  const [activeTag, setActiveTag] = useState('ALL');
+
   const [novaMensagem, setNovaMensagem] = useState({ 
     mensagem: '', 
     horario_do_disparo: '', 
@@ -24,6 +28,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
     opcoes_enquete: '',
     enquete_multipla: false,
     admin_only_settings: null,
+    etiqueta: '',
     grupo_ids: []
   });
   const [editingId, setEditingId] = useState(null);
@@ -87,6 +92,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
         opcoes_enquete: '',
         enquete_multipla: false,
         admin_only_settings: null,
+        etiqueta: '',
         grupo_ids: []
       });
       setFile(null);
@@ -119,6 +125,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       opcoes_enquete: m.opcoes_enquete || '',
       enquete_multipla: m.enquete_multipla || false,
       admin_only_settings: m.admin_only_settings !== undefined ? m.admin_only_settings : null,
+      etiqueta: m.etiqueta || '',
       grupo_ids: m.grupo_ids || []
     });
     setPreviewUrl(m.link_midia);
@@ -137,6 +144,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       opcoes_enquete: '',
       enquete_multipla: false,
       admin_only_settings: null,
+      etiqueta: '',
       grupo_ids: []
     });
     setFile(null);
@@ -155,6 +163,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       opcoes_enquete: '',
       enquete_multipla: false,
       admin_only_settings: null,
+      etiqueta: '',
       grupo_ids: []
     });
     setFile(null);
@@ -181,11 +190,70 @@ export const useScheduling = (onRefresh, mensagens = []) => {
     );
   };
 
+  const handleBulkDelete = async (selectedIds, openConfirm, onSuccess) => {
+    if (!selectedIds || selectedIds.length === 0) return;
+    openConfirm(
+      'Excluir Mensagens em Lote',
+      `Tem certeza que deseja excluir ${selectedIds.length} mensagem(ns) selecionada(s)? Esta ação é irreversível.`,
+      async () => {
+        setProcessing(true);
+        try {
+          const res = await axiosInstance.delete('/mensagens/bulk', { data: { ids: selectedIds } });
+          toastDeletado('Mensagens Excluídas em Lote', res.data?.message || `${selectedIds.length} mensagens deletadas com sucesso.`);
+          if (onSuccess) onSuccess();
+          onRefresh();
+        } catch (error) {
+          toast.error(error.response?.data?.detail || 'Erro ao excluir mensagens em lote');
+        } finally {
+          setProcessing(false);
+        }
+      }
+    );
+  };
+
+  const handleBulkAssignGroups = async (selectedIds, grupoIds, onSuccess) => {
+    if (!selectedIds || selectedIds.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await axiosInstance.patch('/mensagens/bulk-grupos', { ids: selectedIds, grupo_ids: grupoIds });
+      toast.success(res.data?.message || 'Grupos atualizados com sucesso!');
+      if (onSuccess) onSuccess();
+      onRefresh();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao atribuir grupos em lote');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleBulkDuplicate = async (selectedIds, diaDoLancamento, grupoIds, onSuccess) => {
+    if (!selectedIds || selectedIds.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await axiosInstance.post('/mensagens/bulk-duplicate', { 
+        ids: selectedIds, 
+        dia_do_lancamento: diaDoLancamento,
+        grupo_ids: grupoIds 
+      });
+      toast.success(res.data?.message || `${selectedIds.length} mensagem(ns) duplicada(s) com sucesso!`);
+      if (onSuccess) onSuccess();
+      onRefresh();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao duplicar mensagens em lote');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return {
     activeSubTab, setActiveSubTab,
+    searchTerm, setSearchTerm,
+    activeDay, setActiveDay,
+    activeTag, setActiveTag,
     novaMensagem, setNovaMensagem,
     editingId, processing,
     file, setFile, previewUrl, setPreviewUrl, uploadProgress,
-    handleFileChange, handleSubmit, startEdit, openNewForm, cancelEdit, handleDelete
+    handleFileChange, handleSubmit, startEdit, openNewForm, cancelEdit, handleDelete,
+    handleBulkDelete, handleBulkAssignGroups, handleBulkDuplicate
   };
 };

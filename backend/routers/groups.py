@@ -11,6 +11,8 @@ from sqlalchemy import or_
 import models, schemas, security, scheduler
 from database import get_db
 from client_context import get_active_client_id
+import core.wapi as wapi
+from services import sync_service
 
 router = APIRouter(tags=["Grupos"])
 
@@ -228,16 +230,16 @@ def sincronizar_dados_grupos(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro na sincronização: {str(e)}")
 
-import core.wapi as wapi
-from services import sync_service
-
 @router.post("/grupos/{grupo_id}/extrair-contatos", dependencies=[Depends(security.get_api_key)])
 def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depends(get_db)):
     """
     Força a extração imediata dos contatos de um grupo específico via W-API.
     """
     cid = get_active_client_id(db)
-    grupo = db.query(models.GrupoWhatsApp).filter(models.GrupoWhatsApp.id == grupo_id, or_(models.GrupoWhatsApp.cliente_id == cid, models.GrupoWhatsApp.cliente_id.is_(None))).first()
+    grupo = db.query(models.GrupoWhatsApp).filter(
+        models.GrupoWhatsApp.id == grupo_id, 
+        or_(models.GrupoWhatsApp.cliente_id == cid, models.GrupoWhatsApp.cliente_id.is_(None))
+    ).first()
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
 
@@ -249,7 +251,7 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
     agora = datetime.now(sync_service.BR_TZ).replace(tzinfo=None)
 
     with httpx.Client(timeout=30.0) as client:
-        participants = sync_service.fetch_participants(client, wapi.WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
+        participants, is_closed = sync_service.fetch_participants(client, wapi.WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
         if participants is None:
             raise HTTPException(status_code=502, detail="Não foi possível obter participantes da W-API (verifique se a instância está conectada).")
 
@@ -260,50 +262,16 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
         db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
         db.commit()
 
-        webhook_url = getattr(grupo, 'webhook_extracao_url', None)
-        grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
-        enviados_webhook_count = 0
-
-        for p in participants:
-            p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
-            if not p_numero: continue
-            # Remove sufixo @s.whatsapp.net se houver
-            if "@" in p_numero:
-                p_numero = p_numero.split("@")[0]
-
-            p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
-            
-            contato_db = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
-            if not contato_db:
-                contato_db = models.ContatoGrupo(
-                    cliente_id=cid,
-                    nome=p_nome, numero=p_numero, jid_grupo=grupo.id_do_grupo,
-                    nome_grupo=grupo.nome, no_grupo=True,
-                    extraido_em=agora,
-                    webhook_enviado=False
-                )
-                db.add(contato_db)
-                db.flush()
-            else:
-                if p_nome: contato_db.nome = p_nome
-                contato_db.no_grupo = True
-                if cid: contato_db.cliente_id = cid
-
-            # Dispara webhook se configurado e o contato ainda NÃO foi enviado com sucesso
-            if webhook_url and not getattr(contato_db, 'webhook_enviado', False):
-                ok = sync_service.disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
-                if ok:
-                    contato_db.webhook_enviado = True
-                    contato_db.webhook_enviado_em = agora
-                    enviados_webhook_count += 1
-
+        novos_contatos_count = sync_service.processar_participantes_grupo(
+            db, client, instance_id, headers, grupo, participants, agora, group_is_closed=is_closed
+        )
         db.commit()
 
         # Registra log no Histórico
         log = models.LogDisparo(
             cliente_id=cid,
             grupo_nome=grupo.nome,
-            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {enviados_webhook_count} enviados via webhook)",
+            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {novos_contatos_count} novos)",
             status="SUCESSO",
             tipo="extracao_contatos",
             criado_em=agora

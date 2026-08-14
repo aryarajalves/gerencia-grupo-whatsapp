@@ -15,6 +15,7 @@ router = APIRouter(tags=["Logs"])
 def listar_logs(
     status: Optional[str] = Query(None),
     grupo: Optional[str] = Query(None),
+    tipo: Optional[str] = Query(None),
     data_inicio: Optional[date] = Query(None),
     data_fim: Optional[date] = Query(None),
     limit: int = 20,
@@ -31,6 +32,23 @@ def listar_logs(
     
     if grupo:
         query = query.filter(models.LogDisparo.grupo_nome.ilike(f"%{grupo}%"))
+
+    if tipo:
+        if tipo == "disparos":
+            query = query.filter(
+                or_(
+                    models.LogDisparo.tipo.in_(["texto", "imagem", "video", "audio", "arquivo", "enquete", "nome_grupo", "status_grupo"]),
+                    models.LogDisparo.tipo.is_(None)
+                )
+            )
+        elif tipo in ["extracao", "extracao_contatos"]:
+            query = query.filter(models.LogDisparo.tipo == "extracao_contatos")
+        elif tipo == "seguranca":
+            query = query.filter(models.LogDisparo.tipo.in_(["seguranca_adm", "seguranca_grupo", "seguranca_impostor_msg"]))
+        elif tipo in ["fantasma", "fantasma_pesca_leads"]:
+            query = query.filter(models.LogDisparo.tipo == "fantasma_pesca_leads")
+        else:
+            query = query.filter(models.LogDisparo.tipo == tipo)
         
     if data_inicio:
         query = query.filter(func.date(models.LogDisparo.criado_em) >= data_inicio)

@@ -27,7 +27,11 @@ def get_webhook_url(request: Request):
         netloc = request.url.netloc
         base_url = f"{scheme}://{netloc}"
     
-    return {"url": f"{base_url}/webhook/whatsapp"}
+    return {
+        "url": f"{base_url}/webhook/whatsapp",
+        "url_principal": f"{base_url}/webhook/whatsapp",
+        "url_fantasma": f"{base_url}/webhook/fantasma"
+    }
 
 from datetime import datetime, date
 

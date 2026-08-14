@@ -83,14 +83,53 @@ def verificar_status_whatsapp(db):
     except Exception as e:
         print(f"Erro ao verificar status do WhatsApp: {str(e)}")
 
+
+def extrair_flag_fechado(obj: dict):
+    """
+    Inspeciona dicionários da W-API para determinar se o grupo está fechado (apenas admins conversam).
+    No protocolo do WhatsApp Web / W-API:
+    - announce = True -> Fechado (só admins)
+    - announce = False -> Aberto (todos conversam)
+    - onlyAdminsCanSendMessages = True -> Fechado
+    - edit_group_settings / message_admins_only
+    """
+    if not isinstance(obj, dict):
+        return None
+
+    # Verifica chaves diretas
+    for chave in ["announce", "isAnnounce", "onlyAdminsCanSendMessages", "message_admins_only"]:
+        val = obj.get(chave)
+        if val is not None:
+            return bool(val)
+
+    # Verifica se há nested 'group', 'groupMetadata' ou 'metadata'
+    for nested_key in ["group", "groupMetadata", "metadata", "data"]:
+        nested = obj.get(nested_key)
+        if isinstance(nested, dict):
+            res = extrair_flag_fechado(nested)
+            if res is not None:
+                return res
+
+    return None
+
+
 def fetch_participants(client, wapi_base, instance_id, group_id, headers):
-    """Tenta buscar os participantes do grupo usando diferentes endpoints e métodos (resiliência)."""
-    # Endpoints e variações
+    """
+    Busca os participantes e determina se o grupo está Fechado (apenas admins) ou Aberto (todos).
+    Retorna uma tupla (participants: list | None, is_closed: bool | None).
+    """
+    participants = None
+    is_closed = None
+
+    # Estratégias para obter participantes e metadados
     strategies = [
+        {"method": "GET", "url": f"{wapi_base}/group/group-metadata", "params": {"instanceId": instance_id, "groupId": group_id}},
+        {"method": "GET", "url": f"{wapi_base}/group/group-metadata", "params": {"instanceId": instance_id, "groupJid": group_id}},
+        {"method": "GET", "url": f"{wapi_base}/group/get-group-info", "params": {"instanceId": instance_id, "groupId": group_id}},
+        {"method": "GET", "url": f"{wapi_base}/group/get-group-info", "params": {"instanceId": instance_id, "groupJid": group_id}},
         {"method": "GET", "url": f"{wapi_base}/group/get-participants", "params": {"instanceId": instance_id, "groupId": group_id}},
         {"method": "GET", "url": f"{wapi_base}/group/get-participants", "params": {"instanceId": instance_id, "groupJid": group_id}},
-        {"method": "POST", "url": f"{wapi_base}/group/get-participants", "json": {"instanceId": instance_id, "groupId": group_id}},
-        {"method": "GET", "url": f"{wapi_base}/group/get-group-info", "params": {"instanceId": instance_id, "groupId": group_id}}
+        {"method": "POST", "url": f"{wapi_base}/group/get-participants", "json": {"instanceId": instance_id, "groupId": group_id}}
     ]
 
     for strategy in strategies:
@@ -102,18 +141,30 @@ def fetch_participants(client, wapi_base, instance_id, group_id, headers):
 
             if resp.status_code == 200:
                 data = resp.json()
-                # Se for get-group-info, extrai de dentro do objeto group
-                if "get-group-info" in strategy["url"]:
-                    participants = (data.get("group") or data).get("participants")
-                else:
-                    participants = data.get("participants")
+                print(f"W-API Sync DEBUG: Sucesso {strategy['url']} -> chaves: {list(data.keys()) if isinstance(data, dict) else type(data)}")
                 
-                if isinstance(participants, list):
-                    return participants
+                # Tenta extrair flag is_closed
+                flag_found = extrair_flag_fechado(data)
+                if flag_found is not None and is_closed is None:
+                    is_closed = flag_found
+                    print(f"W-API Sync DEBUG: Flag is_closed identificada como: {is_closed}")
+
+                group_obj = data.get("group") or data.get("groupMetadata") or data if isinstance(data, dict) else {}
+                parts = group_obj.get("participants") if isinstance(group_obj, dict) else None
+                if parts is None and isinstance(data, dict):
+                    parts = data.get("participants")
+                if parts is None and isinstance(data, list):
+                    parts = data
+
+                if isinstance(parts, list) and participants is None:
+                    participants = parts
+
+                if participants is not None and is_closed is not None:
+                    break
         except Exception as e:
             print(f"W-API Sync DEBUG: Falha {strategy['method']} {strategy['url']}: {e}")
-    
-    return None
+
+    return participants, is_closed
 
 
 def disparar_webhook_contato(webhook_url: str, contato: dict, grupo: dict) -> bool:
@@ -140,6 +191,102 @@ def disparar_webhook_contato(webhook_url: str, contato: dict, grupo: dict) -> bo
     except Exception as e:
         print(f"W-API Webhook: Erro ao disparar para '{webhook_url}': {e}")
         return False
+
+
+def processar_participantes_grupo(db, client, instance_id, headers, grupo, participants, agora, group_is_closed=None):
+    """
+    Processa participantes, atualiza o status de fechado/aberto do grupo,
+    identifica admins não autorizados (somente se a boleana seguranca_adms_ativa for True E o grupo estiver fechado)
+    e despacha webhooks.
+    """
+    # Atualiza o status do grupo (fechado vs aberto) no banco se foi capturado da W-API
+    if group_is_closed is not None:
+        grupo.status_grupo_fechado = group_is_closed
+
+    webhook_url = getattr(grupo, 'webhook_extracao_url', None)
+    grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
+    enviados_webhook_count = 0
+    novos_contatos_count = 0
+
+    # Parse da lista de admins permitidos
+    adms_permitidos_raw = getattr(grupo, 'adms_permitidos', '') or ''
+    adms_permitidos = [a.strip().replace('@s.whatsapp.net', '') for a in adms_permitidos_raw.split(',') if a.strip()]
+
+    # A verificação da Lista de Segurança só roda se:
+    # 1. A boleana 'seguranca_adms_ativa' estiver TRUE
+    # 2. O grupo estiver FECHADO (status_grupo_fechado is True)
+    # 3. Houver a lista de admins permitidos configurada
+    seguranca_ativa = getattr(grupo, 'seguranca_adms_ativa', False) is True
+    grupo_fechado = (getattr(grupo, 'status_grupo_fechado', None) is True) or (group_is_closed is True)
+
+    deve_validar_seguranca = seguranca_ativa and grupo_fechado and len(adms_permitidos) > 0
+
+    if seguranca_ativa and not grupo_fechado:
+        print(f"W-API SEGURANÇA: Grupo '{grupo.nome}' está ABERTO. Validação da Lista de Segurança omitida conforme regra de negócio.")
+
+    # Checagem de plano W-API (para rebaixamento automatizado se PRO)
+    plan_config = db.query(models.Configuracao).filter(models.Configuracao.chave == "WHATSAPP_PLAN_TYPE").first()
+    is_pro = (plan_config.valor if plan_config else "LITE") == "PRO"
+
+    for p in participants:
+        try:
+            p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
+            if not p_numero: continue
+            if "@" in p_numero:
+                p_numero = p_numero.split("@")[0]
+
+            p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
+            p_admin = (
+                p.get("admin") in ["admin", "superadmin"] or 
+                p.get("isAdmin") is True or 
+                p.get("isSuperAdmin") is True
+            )
+
+            # Validação da Lista de Segurança de Admins
+            if deve_validar_seguranca and p_admin:
+                if p_numero not in adms_permitidos:
+                    # Registra Alerta no Histórico de Disparos/Logs (Apenas alerta, sem rebaixar ou remover)
+                    log_alerta = models.LogDisparo(
+                        cliente_id=grupo.cliente_id,
+                        grupo_nome=grupo.nome,
+                        mensagem_corpo=f"🚨 ALERTA DE SEGURANÇA: Administrador não cadastrado na lista de segurança detectado em grupo fechado ({p_nome} - {p_numero})",
+                        status="ALERTA",
+                        detalhes_erro=f"O grupo está FECHADO e o número {p_numero} foi identificado como administrador sem constar na lista de segurança pré-aprovada.",
+                        tipo="seguranca_adm",
+                        criado_em=agora
+                    )
+                    db.add(log_alerta)
+
+            contato_db = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
+            if not contato_db:
+                contato_db = models.ContatoGrupo(
+                    cliente_id=grupo.cliente_id,
+                    nome=p_nome, numero=p_numero, jid_grupo=grupo.id_do_grupo,
+                    nome_grupo=grupo.nome, no_grupo=True,
+                    is_admin=p_admin,
+                    extraido_em=agora,
+                    webhook_enviado=False
+                )
+                db.add(contato_db)
+                db.flush()
+                novos_contatos_count += 1
+            else:
+                if p_nome: contato_db.nome = p_nome
+                contato_db.no_grupo = True
+                contato_db.is_admin = p_admin
+                if grupo.cliente_id: contato_db.cliente_id = grupo.cliente_id
+
+            # Dispara webhook se configurado, o contato NÃO for Admin e ainda NÃO tiver sido enviado com sucesso
+            if webhook_url and not p_admin and not getattr(contato_db, 'webhook_enviado', False):
+                ok = disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
+                if ok:
+                    contato_db.webhook_enviado = True
+                    contato_db.webhook_enviado_em = agora
+                    enviados_webhook_count += 1
+        except Exception as ep:
+            print(f"Erro participante {p.get('id')}: {ep}")
+
+    return novos_contatos_count
 
 
 def atualizar_contagem_contatos(db):
@@ -175,7 +322,7 @@ def atualizar_contagem_contatos(db):
                 print(f"W-API Sync: Processando grupo '{grupo.nome}' ({grupo.id_do_grupo})...")
                 
                 with httpx.Client(timeout=30.0) as client:
-                    participants = fetch_participants(client, WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
+                    participants, is_closed = fetch_participants(client, WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
                     
                     if participants is None:
                         print(f"W-API Sync: Não foi possível obter participantes para {grupo.nome}.")
@@ -206,47 +353,7 @@ def atualizar_contagem_contatos(db):
                     db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
                     db.commit()
 
-                    webhook_url = getattr(grupo, 'webhook_extracao_url', None)
-                    grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
-                    enviados_webhook_count = 0
-                    novos_contatos_count = 0
-
-                    for p in participants:
-                        try:
-                            p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
-                            if not p_numero: continue
-                            if "@" in p_numero:
-                                p_numero = p_numero.split("@")[0]
-
-                            p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
-                            
-                            contato_db = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
-                            if not contato_db:
-                                contato_db = models.ContatoGrupo(
-                                    cliente_id=grupo.cliente_id,
-                                    nome=p_nome, numero=p_numero, jid_grupo=grupo.id_do_grupo,
-                                    nome_grupo=grupo.nome, no_grupo=True,
-                                    extraido_em=datetime.now(BR_TZ).replace(tzinfo=None),
-                                    webhook_enviado=False
-                                )
-                                db.add(contato_db)
-                                db.flush()
-                                novos_contatos_count += 1
-                            else:
-                                if p_nome: contato_db.nome = p_nome
-                                contato_db.no_grupo = True
-                                if grupo.cliente_id: contato_db.cliente_id = grupo.cliente_id
-
-                            # Dispara webhook se configurado e o contato ainda NÃO foi enviado com sucesso
-                            if webhook_url and not getattr(contato_db, 'webhook_enviado', False):
-                                ok = disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
-                                if ok:
-                                    contato_db.webhook_enviado = True
-                                    contato_db.webhook_enviado_em = datetime.now(BR_TZ).replace(tzinfo=None)
-                                    enviados_webhook_count += 1
-                        except Exception as ep:
-                            print(f"Erro participante {p.get('id')}: {ep}")
-                    
+                    novos_contatos_count = processar_participantes_grupo(db, client, instance_id, headers, grupo, participants, agora, is_closed)
                     db.commit()
 
                     # Salva log de sucesso no Histórico
@@ -298,7 +405,7 @@ def extrair_e_salvar_contatos(db, grupo):
         agora = datetime.now(BR_TZ).replace(tzinfo=None)
 
         with httpx.Client(timeout=30.0) as client:
-            participants = fetch_participants(client, WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
+            participants, is_closed = fetch_participants(client, WAPI_BASE, instance_id, grupo.id_do_grupo, headers)
             if participants is None:
                 return False
 
@@ -324,43 +431,7 @@ def extrair_e_salvar_contatos(db, grupo):
             db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
             db.commit()
 
-            webhook_url = getattr(grupo, 'webhook_extracao_url', None)
-            grupo_info = {"nome": grupo.nome, "jid": grupo.id_do_grupo}
-
-            novos_count = 0
-            for p in participants:
-                try:
-                    p_numero = str(p.get("phone") or p.get("phoneNumber") or p.get("id") or p.get("user") or p.get("number") or "").strip()
-                    if not p_numero: continue
-                    if "@" in p_numero: p_numero = p_numero.split("@")[0]
-
-                    p_nome = p.get("name") or p.get("short") or p.get("pushname") or p.get("verifiedName") or p.get("notify") or p_numero
-
-                    contato_db = db.query(models.ContatoGrupo).filter_by(numero=p_numero, jid_grupo=grupo.id_do_grupo).first()
-                    if not contato_db:
-                        contato_db = models.ContatoGrupo(
-                            cliente_id=grupo.cliente_id,
-                            nome=p_nome, numero=p_numero, jid_grupo=grupo.id_do_grupo,
-                            nome_grupo=grupo.nome, no_grupo=True,
-                            extraido_em=datetime.now(BR_TZ).replace(tzinfo=None),
-                            webhook_enviado=False
-                        )
-                        db.add(contato_db)
-                        db.flush()
-                        novos_count += 1
-                    else:
-                        if p_nome: contato_db.nome = p_nome
-                        contato_db.no_grupo = True
-                        if grupo.cliente_id: contato_db.cliente_id = grupo.cliente_id
-
-                    if webhook_url and not getattr(contato_db, 'webhook_enviado', False):
-                        ok = disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
-                        if ok:
-                            contato_db.webhook_enviado = True
-                            contato_db.webhook_enviado_em = datetime.now(BR_TZ).replace(tzinfo=None)
-                except Exception as ep:
-                    print(f"Erro participante {p.get('id')}: {ep}")
-
+            novos_count = processar_participantes_grupo(db, client, instance_id, headers, grupo, participants, agora, is_closed)
             db.commit()
 
             log_sucesso = models.LogDisparo(
@@ -378,4 +449,3 @@ def extrair_e_salvar_contatos(db, grupo):
         print(f"W-API Sync: Erro ao extrair {grupo.nome}: {e}")
         db.rollback()
         return False
-

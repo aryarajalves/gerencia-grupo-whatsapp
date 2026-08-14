@@ -18,17 +18,31 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     total_grupos_encerrados = db.query(models.GrupoWhatsApp).filter(or_(models.GrupoWhatsApp.cliente_id == cid, models.GrupoWhatsApp.cliente_id.is_(None)), models.GrupoWhatsApp.dia_lancamento_atual == 0).count()
     total_mensagens = db.query(models.MensagemDisparada).filter(or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None))).count()
 
+    DISPARO_TIPOS = ["texto", "imagem", "video", "audio", "arquivo", "enquete", "nome_grupo", "status_grupo"]
+
     hoje = datetime.now(scheduler.BR_TZ).date()
     disparos_hoje = db.query(models.LogDisparo).filter(
         or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None)),
-        func.date(models.LogDisparo.criado_em) == hoje
+        func.date(models.LogDisparo.criado_em) == hoje,
+        or_(models.LogDisparo.tipo.in_(DISPARO_TIPOS), models.LogDisparo.tipo.is_(None))
     ).count()
 
-    total_logs = db.query(models.LogDisparo).filter(or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None))).count()
-    sucessos = db.query(models.LogDisparo).filter(or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None)), models.LogDisparo.status == "Sucesso").count()
-    taxa_sucesso = (sucessos / total_logs * 100) if total_logs > 0 else 100.0
+    total_logs_disparos = db.query(models.LogDisparo).filter(
+        or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None)),
+        or_(models.LogDisparo.tipo.in_(DISPARO_TIPOS), models.LogDisparo.tipo.is_(None))
+    ).count()
+    sucessos_disparos = db.query(models.LogDisparo).filter(
+        or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None)),
+        models.LogDisparo.status == "Sucesso",
+        or_(models.LogDisparo.tipo.in_(DISPARO_TIPOS), models.LogDisparo.tipo.is_(None))
+    ).count()
+    taxa_sucesso = (sucessos_disparos / total_logs_disparos * 100) if total_logs_disparos > 0 else 100.0
 
-    ultimo_disparo = db.query(models.LogDisparo).filter(or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None)), models.LogDisparo.status == "Sucesso").order_by(models.LogDisparo.criado_em.desc()).first()
+    ultimo_disparo = db.query(models.LogDisparo).filter(
+        or_(models.LogDisparo.cliente_id == cid, models.LogDisparo.cliente_id.is_(None)),
+        models.LogDisparo.status == "Sucesso",
+        or_(models.LogDisparo.tipo.in_(DISPARO_TIPOS), models.LogDisparo.tipo.is_(None))
+    ).order_by(models.LogDisparo.criado_em.desc()).first()
 
     agora_br = datetime.now(scheduler.BR_TZ)
     hora_atual = agora_br.time()

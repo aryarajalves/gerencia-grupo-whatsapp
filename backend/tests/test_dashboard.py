@@ -38,21 +38,30 @@ def test_dashboard_stats(client, db_session):
     db_session.add(m1)
     db_session.commit()
     
-    # 3. Setup: Criar logs de hoje
+    # 3. Setup: Criar logs de hoje (incluindo 1 extração que não deve ser contada como disparo)
     hoje = datetime.now(scheduler.BR_TZ)
     log1 = models.LogDisparo(
         grupo_nome="Grupo Ativo",
         mensagem_corpo="Mensagem Enviada",
+        tipo="texto",
         status="Sucesso",
         criado_em=hoje
     )
     log2 = models.LogDisparo(
         grupo_nome="Grupo Ativo",
         mensagem_corpo="Mensagem Falhou",
+        tipo="texto",
         status="Erro",
         criado_em=hoje
     )
-    db_session.add_all([log1, log2])
+    log3_extracao = models.LogDisparo(
+        grupo_nome="Grupo Ativo",
+        mensagem_corpo="Extração de contatos realizada (3 contatos)",
+        tipo="extracao_contatos",
+        status="Sucesso",
+        criado_em=hoje
+    )
+    db_session.add_all([log1, log2, log3_extracao])
     db_session.commit()
     
     # 4. Requisição para o dashboard

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, PlusCircle, Pencil, MessageSquare, Clock, CalendarDays, Layers, Trash2, Image, Video, Mic, FileText, LayoutGrid, Upload, X, CheckCircle2, Lock } from 'lucide-react';
+import { Send, PlusCircle, Pencil, MessageSquare, Clock, CalendarDays, Layers, Trash2, Image, Video, Mic, FileText, LayoutGrid, Upload, X, CheckCircle2, Lock, Tag } from 'lucide-react';
 import { TIPO_CONFIG } from '../../../utils/constants';
 
 const MessageForm = ({ 
@@ -15,7 +15,8 @@ const MessageForm = ({
   setPreviewUrl, 
   uploadProgress, 
   handleFileChange,
-  grupos
+  grupos,
+  mensagens = []
 }) => {
   const toggleGrupo = (grupoId) => {
     const current = novaMensagem.grupo_ids || [];
@@ -40,7 +41,7 @@ const MessageForm = ({
       </div>
 
       <form onSubmit={onSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1.2fr', gap: '1.25rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="label-premium"><Layers size={12} /> Tipo de Conteúdo</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -88,6 +89,39 @@ const MessageForm = ({
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="label-premium"><Clock size={12} /> Horário do Disparo</label>
             <input type="time" value={novaMensagem.horario_do_disparo} onChange={e => setNovaMensagem({ ...novaMensagem, horario_do_disparo: e.target.value })} required style={{ width: '100%', fontSize: '1.1rem', fontWeight: 700 }} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="label-premium"><Tag size={12} /> Etiqueta / Tag (Opcional)</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                list="etiquetas-existentes-list"
+                placeholder="Digite ou escolha uma etiqueta..." 
+                value={novaMensagem.etiqueta || ''} 
+                onChange={e => setNovaMensagem({ ...novaMensagem, etiqueta: e.target.value })} 
+                style={{ flex: 1, fontSize: '0.95rem', fontWeight: 600 }} 
+              />
+              <datalist id="etiquetas-existentes-list">
+                {[...new Set((mensagens || []).map(m => m.etiqueta).filter(Boolean))].map(tag => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+
+              {[...new Set((mensagens || []).map(m => m.etiqueta).filter(Boolean))].length > 0 && (
+                <select
+                  value={novaMensagem.etiqueta || ''}
+                  onChange={e => setNovaMensagem({ ...novaMensagem, etiqueta: e.target.value })}
+                  className="input-premium"
+                  style={{ width: 'auto', minWidth: '130px', fontSize: '0.85rem', fontWeight: 600, padding: '8px 10px' }}
+                >
+                  <option value="">-- Selecionar --</option>
+                  {[...new Set((mensagens || []).map(m => m.etiqueta).filter(Boolean))].map(tag => (
+                    <option key={tag} value={tag}>{tag}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
         </div>
 

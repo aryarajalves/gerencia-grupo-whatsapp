@@ -35,6 +35,9 @@ describe('GroupForm - Configurações de Extração de Contatos', () => {
     expect(screen.getByText('Habilitada')).toBeInTheDocument();
     expect(screen.getByText('Desabilitada')).toBeInTheDocument();
     expect(screen.getByDisplayValue('A cada 30 minutos (Padrão)')).toBeInTheDocument();
+    expect(screen.getByText('A cada 1 minuto')).toBeInTheDocument();
+    expect(screen.getByText('A cada 5 minutos')).toBeInTheDocument();
+    expect(screen.getByText('A cada 10 minutos')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://hook.plataforma.com/webhook/...')).toBeInTheDocument();
   });
 
