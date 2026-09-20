@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import BulkDuplicateModal from '../pages/Scheduling/components/BulkDuplicateModal';
 
@@ -46,8 +47,8 @@ describe('BulkDuplicateModal', () => {
   });
 
   it('chama onSave com o dia e grupos selecionados ao clicar em confirmar', () => {
-    const handleSave = jest.fn();
-    const handleClose = jest.fn();
+    const handleSave = vi.fn();
+    const handleClose = vi.fn();
 
     render(
       <BulkDuplicateModal 

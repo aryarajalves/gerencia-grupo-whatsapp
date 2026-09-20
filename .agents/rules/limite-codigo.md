@@ -11,6 +11,7 @@ Para garantir que o projeto permaneça manutenível e que o agente consiga proce
 2. **Frontend (React/JSX):** Nenhum arquivo deve ultrapassar **500 linhas**.
 
 **Ações ao atingir o limite:**
+- Antes de iniciar qualquer quebra ou refatoração, crie obrigatoriamente um backup do arquivo original (conforme `modularizacao-arquitetura.md`).
 - Se uma nova funcionalidade for fazer um arquivo ultrapassar esses limites, você **DEVE** realizar a modularização (quebra do arquivo) antes de prosseguir com a implementação.
 - Priorize a extração de componentes (frontend) e serviços/utilitários (backend) para arquivos separados.
 

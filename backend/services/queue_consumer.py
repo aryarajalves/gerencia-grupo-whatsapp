@@ -1,6 +1,7 @@
 import os
 import time
 import json
+from datetime import datetime
 import pika
 from sqlalchemy import func
 from core.logger import logger
@@ -26,6 +27,34 @@ def _process_dispatch(ch, method, properties, body):
         msg = db.query(models.MensagemDisparada).filter(models.MensagemDisparada.id == msg_id).first()
 
         if grupo and msg:
+            # 1. Validação de Grupo Ativo
+            if not getattr(grupo, 'ativo', True):
+                logger.warning(f"[CONSUMER DISPAROS] Disparo cancelado: o grupo '{grupo.nome}' está pausado/inativo.")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # 2. Validação de Mensagem Ativa
+            if not getattr(msg, 'ativo', True):
+                logger.warning(f"[CONSUMER DISPAROS] Disparo cancelado: a mensagem (ID: {msg.id}) está inativa.")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # 3. Validação de Dia de Ciclo Atual
+            if grupo.dia_lancamento_atual != msg.dia_do_lancamento:
+                logger.warning(f"[CONSUMER DISPAROS] Disparo cancelado: ciclo do grupo '{grupo.nome}' (Dia {grupo.dia_lancamento_atual}) diverge do dia da mensagem (Dia {msg.dia_do_lancamento}).")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # 4. Validação de Associação (se a mensagem ainda está associada ao grupo)
+            associado = db.query(models.GrupoMensagem).filter(
+                models.GrupoMensagem.grupo_id == grupo.id,
+                models.GrupoMensagem.mensagem_id == msg.id
+            ).first()
+            if not associado:
+                logger.warning(f"[CONSUMER DISPAROS] Disparo cancelado: a mensagem (ID: {msg.id}) não está vinculada ao grupo '{grupo.nome}'.")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
             import pytz
             BR_TZ = pytz.timezone('America/Sao_Paulo')
             hoje = datetime.now(BR_TZ).date()

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Users, CalendarDays, PlusCircle, Pencil, RefreshCw, 
-  ShieldCheck, Settings, Ghost 
+  ShieldCheck, Settings, Ghost, Vote 
 } from 'lucide-react';
 
 import GeneralTab from './tabs/GeneralTab';
@@ -9,6 +9,7 @@ import CycleTab from './tabs/CycleTab';
 import ExtractionTab from './tabs/ExtractionTab';
 import SecurityTab from './tabs/SecurityTab';
 import GhostTab from './tabs/GhostTab';
+import PollTab from './tabs/PollTab';
 
 const GroupForm = ({ 
   novoGrupo, 
@@ -199,6 +200,25 @@ const GroupForm = ({
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} />
           )}
         </button>
+
+        {/* Aba 6: Webhook de Enquetes */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('enquetes')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem', fontWeight: 600,
+            cursor: 'pointer', border: 'none', background: 'transparent',
+            color: activeTab === 'enquetes' ? '#fff' : 'var(--text-dim)',
+            borderBottom: activeTab === 'enquetes' ? '2px solid #ec4899' : '2px solid transparent',
+            transition: 'all 0.2s', whiteSpace: 'nowrap'
+          }}
+        >
+          <Vote size={14} style={{ color: activeTab === 'enquetes' ? '#ec4899' : 'inherit' }} />
+          Webhook de Enquetes
+          {Boolean(novoGrupo.webhook_enquete_ativo) && (
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ec4899' }} />
+          )}
+        </button>
       </div>
 
       <form onSubmit={onSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -256,6 +276,14 @@ const GroupForm = ({
         {/* ==================== ABA 5: NÚMERO FANTASMA ==================== */}
         {activeTab === 'ghost' && (
           <GhostTab 
+            novoGrupo={novoGrupo}
+            setNovoGrupo={setNovoGrupo}
+          />
+        )}
+
+        {/* ==================== ABA 6: WEBHOOK DE ENQUETES ==================== */}
+        {activeTab === 'enquetes' && (
+          <PollTab 
             novoGrupo={novoGrupo}
             setNovoGrupo={setNovoGrupo}
           />

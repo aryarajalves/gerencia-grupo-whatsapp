@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import uuid
 import os
 import secrets
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 import models, schemas, security
 from database import get_db
@@ -25,6 +25,15 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
     if not is_valid:
         logger.warning(f"Login falhou: Senha incorreta para '{login_data.email}'.")
         raise HTTPException(status_code=401, detail="E-mail ou senha incorretos")
+
+    # Atualização transparente de hashes antigos para Argon2id
+    if security.needs_rehash(db_user.senha_hash):
+        try:
+            db_user.senha_hash = security.get_password_hash(login_data.password)
+            db.commit()
+            logger.info(f"Senha do usuário '{login_data.email}' atualizada com sucesso para hash Argon2id.")
+        except Exception as e:
+            logger.error(f"Falha ao auto-atualizar hash para Argon2id no login: {e}")
 
     user_data = {"id": str(db_user.id), "nome": db_user.nome, "cargo": db_user.cargo}
     access_token = security.create_access_token(
@@ -136,6 +145,119 @@ def validar_convite(token: str, db: Session = Depends(get_db)):
 
     return response_data
 
+from services.email_service import enviar_email_codigo_verificacao
+
+@router.post("/registrar/solicitar-codigo", response_model=schemas.UserRegisterResponse)
+def solicitar_codigo_registro(data: schemas.UserRegisterRequestCode, db: Session = Depends(get_db)):
+    if data.password != data.confirm_password:
+        raise HTTPException(status_code=400, detail="As senhas não coincidem.")
+        
+    db_invite = db.query(models.Invitation).filter(
+        models.Invitation.token == data.token,
+        models.Invitation.usado == False
+    ).first()
+    
+    if not db_invite or db_invite.tipo != "convite":
+        raise HTTPException(status_code=400, detail="Token de convite inválido ou expirado.")
+    
+    if db_invite.expira_em and db_invite.expira_em < models.get_br_time():
+        raise HTTPException(status_code=400, detail="Este convite expirou.")
+
+    if db.query(models.Usuario).filter(models.Usuario.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado no sistema.")
+
+    # Gera código aleatório de 6 dígitos
+    codigo = f"{secrets.randbelow(1000000):06d}"
+    expira_em = models.get_br_time() + timedelta(minutes=15)
+    senha_hash = security.get_password_hash(data.password)
+
+    # Invalida tentativas anteriores não confirmadas para o mesmo e-mail ou convite
+    db.query(models.EmailVerification).filter(
+        (models.EmailVerification.email == data.email) | (models.EmailVerification.token_convite == data.token),
+        models.EmailVerification.usado == False
+    ).update({"usado": True})
+
+    # Registra nova verificação pendente
+    nova_verificacao = models.EmailVerification(
+        email=data.email,
+        codigo=codigo,
+        nome=data.nome,
+        senha_hash=senha_hash,
+        cargo=db_invite.cargo,
+        token_convite=data.token,
+        expira_em=expira_em,
+        usado=False
+    )
+    db.add(nova_verificacao)
+    db.commit()
+
+    # Envia e-mail via Brevo
+    sucesso_envio = enviar_email_codigo_verificacao(
+        destinatario_email=data.email,
+        destinatario_nome=data.nome,
+        codigo=codigo,
+        tempo_expiracao_minutos=15
+    )
+
+    if not sucesso_envio:
+        logger.warning(f"Falha ao enviar e-mail via Brevo para {data.email}, mas código foi persistido.")
+
+    # Mascara e-mail para exibição segura no frontend
+    partes = data.email.split("@")
+    usuario_str, dominio_str = partes[0], partes[1] if len(partes) > 1 else ""
+    if len(usuario_str) > 2:
+        mascarado = f"{usuario_str[:2]}***@{dominio_str}"
+    else:
+        mascarado = f"{usuario_str[0]}***@{dominio_str}"
+
+    return {
+        "message": "Código de confirmação enviado com sucesso para o seu e-mail.",
+        "email_masked": mascarado
+    }
+
+@router.post("/registrar/confirmar-codigo")
+def confirmar_codigo_registro(data: schemas.UserRegisterConfirmCode, db: Session = Depends(get_db)):
+    db_invite = db.query(models.Invitation).filter(
+        models.Invitation.token == data.token,
+        models.Invitation.usado == False
+    ).first()
+    
+    if not db_invite or db_invite.tipo != "convite":
+        raise HTTPException(status_code=400, detail="Token de convite inválido ou expirado.")
+
+    verificacao = db.query(models.EmailVerification).filter(
+        models.EmailVerification.token_convite == data.token,
+        models.EmailVerification.email == data.email,
+        models.EmailVerification.codigo == data.codigo.strip(),
+        models.EmailVerification.usado == False
+    ).order_by(models.EmailVerification.criado_em.desc()).first()
+
+    if not verificacao:
+        raise HTTPException(status_code=400, detail="Código de verificação incorreto ou inválido.")
+
+    if verificacao.expira_em and verificacao.expira_em < models.get_br_time():
+        raise HTTPException(status_code=400, detail="O código de confirmação expirou. Solicite um novo código.")
+
+    if db.query(models.Usuario).filter(models.Usuario.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado no sistema.")
+
+    # Cria o usuário efetivo com o hash Argon2id já calculado
+    novo_usuario = models.Usuario(
+        nome=verificacao.nome,
+        email=verificacao.email,
+        cargo=verificacao.cargo,
+        senha_hash=verificacao.senha_hash,
+        ativo=True
+    )
+    
+    db.add(novo_usuario)
+    verificacao.usado = True
+    db_invite.usado = True
+    db.commit()
+    
+    logger.info(f"Usuário verificado e registrado com sucesso: {verificacao.email} (Cargo: {verificacao.cargo})")
+    return {"message": "Conta ativada com sucesso! Redirecionando para o login..."}
+
 @router.post("/registrar")
 def registrar_usuario(data: schemas.UserRegister, db: Session = Depends(get_db)):
     if data.password != data.confirm_password:
@@ -216,4 +338,42 @@ def toggle_usuario(usuario_id: uuid.UUID, db: Session = Depends(get_db)):
     db_user.ativo = not db_user.ativo
     db.commit()
     return {"ativo": db_user.ativo}
+
+@router.put("/usuarios/{usuario_id}", response_model=schemas.Usuario, dependencies=[Depends(security.check_super_admin)])
+def editar_usuario(usuario_id: uuid.UUID, data: schemas.UsuarioUpdate, db: Session = Depends(get_db)):
+    db_user = db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    super_admin_email = os.getenv("SUPER_ADMIN_EMAIL", "")
+    if db_user.email == super_admin_email or db_user.cargo == "SUPER_ADMIN":
+        raise HTTPException(status_code=400, detail="O Super Administrador do sistema não pode ser editado.")
+
+    if data.email and data.email.strip().lower() != db_user.email.lower():
+        email_novo = data.email.strip().lower()
+        existente = db.query(models.Usuario).filter(
+            models.Usuario.email == email_novo,
+            models.Usuario.id != usuario_id
+        ).first()
+        if existente:
+            raise HTTPException(status_code=400, detail="Este e-mail já está em uso por outro usuário.")
+        db_user.email = email_novo
+
+    if data.nome is not None and len(data.nome.strip()) > 0:
+        db_user.nome = data.nome.strip()
+
+    if data.cargo is not None:
+        db_user.cargo = data.cargo
+
+    if data.ativo is not None:
+        db_user.ativo = data.ativo
+
+    if data.password and len(data.password.strip()) > 0:
+        db_user.senha_hash = security.get_password_hash(data.password.strip())
+
+    db.commit()
+    db.refresh(db_user)
+    logger.info(f"Usuário {db_user.email} editado com sucesso.")
+    return db_user
+
 

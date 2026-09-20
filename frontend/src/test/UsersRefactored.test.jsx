@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
+import React from 'react';
 import Users from '../pages/Users';
 import { useUsers } from '../pages/Users/hooks/useUsers';
 
@@ -9,26 +10,39 @@ vi.mock('../pages/Users/hooks/useUsers', () => ({
 }));
 
 test('renders Users component with user list', () => {
-  // Setup mock return value
   useUsers.mockReturnValue({
+    invites: [],
+    activeTab: 'usuarios',
+    setActiveTab: vi.fn(),
     searchTerm: '',
     setSearchTerm: vi.fn(),
     cargoFilter: '',
     setCargoFilter: vi.fn(),
-    showModal: false,
-    setShowModal: vi.fn(),
-    newUser: { id: null, nome: '', email: '', password: '', cargo: 'USER' },
-    setNewUser: vi.fn(),
-    showPass: false,
-    setShowPass: vi.fn(),
+    showInviteModal: false,
+    setShowInviteModal: vi.fn(),
+    showResetModal: false,
+    setShowResetModal: vi.fn(),
+    showEditModal: false,
+    setShowEditModal: vi.fn(),
+    selectedUser: null,
+    editUser: { id: null, nome: '', email: '', cargo: 'ADMIN', password: '' },
+    setEditUser: vi.fn(),
+    submittingEdit: false,
     toast: { show: false, message: '', type: 'info' },
     filteredUsers: [
-      { id: 1, nome: 'João Teste', email: 'joao@teste.com', cargo: 'ADMIN', ativo: true }
+      { id: '1', nome: 'João Teste', email: 'joao@teste.com', cargo: 'ADMIN', ativo: true, isFixed: false }
     ],
-    handleSaveUser: vi.fn(),
+    currentPage: 1,
+    setCurrentPage: vi.fn(),
+    itemsPerPage: 10,
+    setItemsPerPage: vi.fn(),
     handleDeleteUser: vi.fn(),
+    handleDeleteInvite: vi.fn(),
     toggleStatus: vi.fn(),
-    startEditUser: vi.fn()
+    startResetPassword: vi.fn(),
+    startEditUser: vi.fn(),
+    handleUpdateUser: vi.fn(),
+    refreshInvites: vi.fn()
   });
 
   render(<Users openConfirm={vi.fn()} />);
@@ -40,25 +54,38 @@ test('renders Users component with user list', () => {
 
 test('renders empty state when no users found', () => {
   useUsers.mockReturnValue({
+    invites: [],
+    activeTab: 'usuarios',
+    setActiveTab: vi.fn(),
     searchTerm: 'inexistente',
     setSearchTerm: vi.fn(),
     cargoFilter: '',
     setCargoFilter: vi.fn(),
-    showModal: false,
-    setShowModal: vi.fn(),
-    newUser: { id: null, nome: '', email: '', password: '', cargo: 'USER' },
-    setNewUser: vi.fn(),
-    showPass: false,
-    setShowPass: vi.fn(),
+    showInviteModal: false,
+    setShowInviteModal: vi.fn(),
+    showResetModal: false,
+    setShowResetModal: vi.fn(),
+    showEditModal: false,
+    setShowEditModal: vi.fn(),
+    selectedUser: null,
+    editUser: { id: null, nome: '', email: '', cargo: 'ADMIN', password: '' },
+    setEditUser: vi.fn(),
+    submittingEdit: false,
     toast: { show: false, message: '', type: 'info' },
     filteredUsers: [],
-    handleSaveUser: vi.fn(),
+    currentPage: 1,
+    setCurrentPage: vi.fn(),
+    itemsPerPage: 10,
+    setItemsPerPage: vi.fn(),
     handleDeleteUser: vi.fn(),
+    handleDeleteInvite: vi.fn(),
     toggleStatus: vi.fn(),
-    startEditUser: vi.fn()
+    startResetPassword: vi.fn(),
+    startEditUser: vi.fn(),
+    handleUpdateUser: vi.fn(),
+    refreshInvites: vi.fn()
   });
 
   render(<Users openConfirm={vi.fn()} />);
-  
-  expect(screen.getByText(/Nenhum usuário encontrado com os filtros atuais/i)).toBeDefined();
+  expect(screen.getByText(/Nenhum usuário encontrado/i)).toBeDefined();
 });

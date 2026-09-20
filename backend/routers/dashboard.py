@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 from sqlalchemy import func, or_
@@ -56,6 +56,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     
     for grupo in grupos_em_ciclo:
         ids_associados = [r[0] for r in db.query(models.GrupoMensagem.mensagem_id).filter(models.GrupoMensagem.grupo_id == grupo.id).all()]
+        if not ids_associados:
+            continue
         msg_query = db.query(models.MensagemDisparada).filter(
             or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None)),
             models.MensagemDisparada.dia_do_lancamento == grupo.dia_lancamento_atual,
@@ -63,19 +65,23 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
             models.MensagemDisparada.ativo == True
         ).filter(
             models.MensagemDisparada.id.in_(ids_associados)
-        )
+        ).order_by(models.MensagemDisparada.horario_do_disparo)
             
         mensagens_pendentes = msg_query.all()
         for m in mensagens_pendentes:
             proximos.append({
                 "horario": m.horario_do_disparo.strftime("%H:%M"),
                 "grupo": grupo.nome,
-                "mensagem": (m.mensagem[:50] + "...") if m.mensagem and len(m.mensagem) > 50 else (m.mensagem or f"[{m.tipo_de_mensagem.upper()}]"),
-                "tipo": m.tipo_de_mensagem or "texto"
+                "mensagem": (m.mensagem[:70] + "...") if m.mensagem and len(m.mensagem) > 70 else (m.mensagem or f"[{m.tipo_de_mensagem.upper()}]"),
+                "tipo": m.tipo_de_mensagem or "texto",
+                "etiqueta": m.etiqueta,
+                "link_convite": grupo.link_convite,
+                "grupo_id": str(grupo.id),
+                "mensagem_id": str(m.id),
+                "mensagem_completa": m.mensagem or ""
             })
             
     proximos.sort(key=lambda x: x["horario"])
-    proximos = proximos[:5]
 
     grupos_por_dia_map = {}
     todos_grupos_ciclo = db.query(models.GrupoWhatsApp).filter(

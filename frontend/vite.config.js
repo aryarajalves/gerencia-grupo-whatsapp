@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    allowedHosts: 'all'
+    allowedHosts: 'all',
+    watch: {
+      usePolling: true,
+    }
   },
   test: {
     globals: true,

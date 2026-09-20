@@ -4,6 +4,45 @@ Este arquivo registra todas as alterações na estrutura do banco de dados (tabe
 
 ---
 
+### [2026-08-28] Tabela de Verificação de E-mails e Códigos de Registro (Brevo)
+- **Tabela Adicionada:** `email_verifications`
+  - `id` (GUID / Primary Key)
+  - `email` (VARCHAR, Index)
+  - `codigo` (VARCHAR, Index) — Código de 6 dígitos para validação
+  - `nome` (VARCHAR)
+  - `senha_hash` (TEXT) — Senha hasheada com Argon2id
+  - `cargo` (VARCHAR)
+  - `token_convite` (VARCHAR, Index)
+  - `expira_em` (TIMESTAMP) — Validade do código (15 min)
+  - `usado` (BOOLEAN DEFAULT FALSE)
+  - `criado_em` (TIMESTAMP)
+- **Script de Migração:** `backend/scripts/add_email_verifications_table.py` e integrado em `backend/migrations.py`.
+- **Descrição:** Armazena temporariamente os dados de pré-cadastro e o código de 6 dígitos disparado via Brevo para validar se o e-mail é real e ativar a conta.
+
+---
+
+### [2026-08-15] Escopo de Webhook de Enquete e Seleção de Enquetes Específicas
+- **Tabelas Afetadas:**
+  - `grupos_whatsapp`: 
+    - `webhook_enquete_modo` (VARCHAR(50) DEFAULT 'todas') — Define se dispara para `todas` as enquetes do grupo ou apenas para `selecionadas` (enquetes programadas marcadas).
+    - `webhook_enquete_ids` (TEXT NULL) — Lista em JSON com os IDs das mensagens de enquetes programadas autorizadas para este grupo.
+  - `mensagens_disparadas`: `webhook_enquete_ativo` (BOOLEAN DEFAULT TRUE) — Define individualmente se as respostas de uma enquete agendada devem ser disparadas para o webhook.
+- **Script de Migração:** `backend/scripts/add_webhook_enquete_ids_column.py` e integrado em `backend/migrations.py`.
+- **Descrição:** Permite selecionar na aba do grupo exatamente quais enquetes programadas disparam para o webhook.
+
+---
+
+### [2026-08-15] Webhook de Respostas de Enquetes por Grupo
+- **Tabela Afetada:** `grupos_whatsapp`
+- **Colunas Adicionadas:**
+  - `webhook_enquete_ativo` (BOOLEAN DEFAULT FALSE) — Toggle para ativar ou desativar o envio de votos/respostas de enquetes para um webhook externo.
+  - `webhook_enquete_url` (TEXT NULL) — URL externa para receber dados dos votos de enquetes via HTTP POST.
+  - `webhook_enquete_delay_segundos` (INTEGER DEFAULT 0) — Tempo de espera/debounce em segundos antes do disparo para consolidar alterações de votos e enviar apenas a mais recente.
+- **Script de Migração:** `backend/scripts/add_webhook_enquete_columns.py` e integrado em `backend/migrations.py`.
+- **Descrição:** Permite que cada grupo configure um webhook dedicado para receber em tempo real os votos e respostas de enquetes com debounce configurável.
+
+---
+
 ### [2026-08-14] Ativação de Número Fantasma por Grupo
 - **Tabela Afetada:** `grupos_whatsapp`
 - **Coluna Adicionada:**

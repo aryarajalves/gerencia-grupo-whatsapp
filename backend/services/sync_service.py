@@ -193,11 +193,15 @@ def disparar_webhook_contato(webhook_url: str, contato: dict, grupo: dict) -> bo
         return False
 
 
-def processar_participantes_grupo(db, client, instance_id, headers, grupo, participants, agora, group_is_closed=None):
+def processar_participantes_grupo(
+    db, client, instance_id, headers, grupo, participants, agora,
+    group_is_closed=None, forcar_reenvio_webhook=False, retornar_detalhes=False
+):
     """
     Processa participantes, atualiza o status de fechado/aberto do grupo,
     identifica admins não autorizados (somente se a boleana seguranca_adms_ativa for True E o grupo estiver fechado)
     e despacha webhooks.
+    Se forcar_reenvio_webhook=True, reenvia para todos os contatos não-administradores mesmo se já enviados.
     """
     # Atualiza o status do grupo (fechado vs aberto) no banco se foi capturado da W-API
     if group_is_closed is not None:
@@ -223,10 +227,6 @@ def processar_participantes_grupo(db, client, instance_id, headers, grupo, parti
 
     if seguranca_ativa and not grupo_fechado:
         print(f"W-API SEGURANÇA: Grupo '{grupo.nome}' está ABERTO. Validação da Lista de Segurança omitida conforme regra de negócio.")
-
-    # Checagem de plano W-API (para rebaixamento automatizado se PRO)
-    plan_config = db.query(models.Configuracao).filter(models.Configuracao.chave == "WHATSAPP_PLAN_TYPE").first()
-    is_pro = (plan_config.valor if plan_config else "LITE") == "PRO"
 
     for p in participants:
         try:
@@ -276,8 +276,9 @@ def processar_participantes_grupo(db, client, instance_id, headers, grupo, parti
                 contato_db.is_admin = p_admin
                 if grupo.cliente_id: contato_db.cliente_id = grupo.cliente_id
 
-            # Dispara webhook se configurado, o contato NÃO for Admin e ainda NÃO tiver sido enviado com sucesso
-            if webhook_url and not p_admin and not getattr(contato_db, 'webhook_enviado', False):
+            # Dispara webhook se configurado, o contato NÃO for Admin e (ainda NÃO tiver sido enviado com sucesso OU forçado reenvio)
+            deve_enviar_webhook = webhook_url and not p_admin and (forcar_reenvio_webhook or not getattr(contato_db, 'webhook_enviado', False))
+            if deve_enviar_webhook:
                 ok = disparar_webhook_contato(webhook_url, {"nome": p_nome, "numero": p_numero}, grupo_info)
                 if ok:
                     contato_db.webhook_enviado = True
@@ -286,6 +287,8 @@ def processar_participantes_grupo(db, client, instance_id, headers, grupo, parti
         except Exception as ep:
             print(f"Erro participante {p.get('id')}: {ep}")
 
+    if retornar_detalhes:
+        return {"novos": novos_contatos_count, "webhooks": enviados_webhook_count}
     return novos_contatos_count
 
 

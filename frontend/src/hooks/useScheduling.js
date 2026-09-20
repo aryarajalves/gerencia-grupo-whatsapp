@@ -5,6 +5,18 @@ import { toastPlanoInsuficiente } from '../utils/toastPlano';
 import { toastDeletado } from '../utils/toastNotifications';
 import { useWaStatus } from '../contexts/WaStatusContext';
 
+const extractErrorMessage = (error, defaultMsg = 'Ocorreu um erro na operação') => {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(item => typeof item === 'string' ? item : item.msg || JSON.stringify(item)).join('; ');
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.msg || JSON.stringify(detail);
+  }
+  return error?.message || defaultMsg;
+};
+
 export const useScheduling = (onRefresh, mensagens = []) => {
   const { waStatus } = useWaStatus();
 
@@ -18,6 +30,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDay, setActiveDay] = useState('ALL');
   const [activeTag, setActiveTag] = useState('ALL');
+  const [activeType, setActiveType] = useState('ALL');
 
   const [novaMensagem, setNovaMensagem] = useState({ 
     mensagem: '', 
@@ -27,6 +40,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
     link_midia: '',
     opcoes_enquete: '',
     enquete_multipla: false,
+    webhook_enquete_ativo: true,
     admin_only_settings: null,
     etiqueta: '',
     grupo_ids: []
@@ -91,6 +105,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
         link_midia: '',
         opcoes_enquete: '',
         enquete_multipla: false,
+        webhook_enquete_ativo: true,
         admin_only_settings: null,
         etiqueta: '',
         grupo_ids: []
@@ -112,6 +127,8 @@ export const useScheduling = (onRefresh, mensagens = []) => {
 
   const startEdit = (m) => {
     setEditingId(m.id);
+    setFile(null);
+    setUploadProgress(0);
     const isStatus = (m.tipo_de_mensagem === 'status_grupo');
     const act = m.link_midia || (m.mensagem === 'abrir' ? 'abrir' : 'fechar');
     const txt = (m.mensagem === 'fechar' || m.mensagem === 'abrir') ? '' : (m.mensagem || '');
@@ -124,6 +141,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       link_midia: isStatus ? act : (m.link_midia || ''),
       opcoes_enquete: m.opcoes_enquete || '',
       enquete_multipla: m.enquete_multipla || false,
+      webhook_enquete_ativo: m.webhook_enquete_ativo !== undefined ? m.webhook_enquete_ativo : true,
       admin_only_settings: m.admin_only_settings !== undefined ? m.admin_only_settings : null,
       etiqueta: m.etiqueta || '',
       grupo_ids: m.grupo_ids || []
@@ -143,6 +161,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       link_midia: '',
       opcoes_enquete: '',
       enquete_multipla: false,
+      webhook_enquete_ativo: true,
       admin_only_settings: null,
       etiqueta: '',
       grupo_ids: []
@@ -162,6 +181,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       link_midia: '',
       opcoes_enquete: '',
       enquete_multipla: false,
+      webhook_enquete_ativo: true,
       admin_only_settings: null,
       etiqueta: '',
       grupo_ids: []
@@ -182,7 +202,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
           toastDeletado('Mensagem Agendada Excluída', 'A mensagem foi removida do roteiro.');
           onRefresh();
         } catch (error) {
-          toast.error(error.response?.data?.detail || 'Erro ao excluir mensagem');
+          toast.error(extractErrorMessage(error, 'Erro ao excluir mensagem'));
         } finally {
           setProcessing(false);
         }
@@ -198,12 +218,22 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       async () => {
         setProcessing(true);
         try {
-          const res = await axiosInstance.delete('/mensagens/bulk', { data: { ids: selectedIds } });
+          let res;
+          try {
+            res = await axiosInstance.delete('/mensagens/bulk', { data: { ids: selectedIds } });
+          } catch (deleteErr) {
+            // Fallback caso algum proxy ou cliente bloqueie corpo em DELETE
+            if (deleteErr.response?.status === 405 || deleteErr.response?.status === 422) {
+              res = await axiosInstance.post('/mensagens/bulk-delete', { ids: selectedIds });
+            } else {
+              throw deleteErr;
+            }
+          }
           toastDeletado('Mensagens Excluídas em Lote', res.data?.message || `${selectedIds.length} mensagens deletadas com sucesso.`);
           if (onSuccess) onSuccess();
           onRefresh();
         } catch (error) {
-          toast.error(error.response?.data?.detail || 'Erro ao excluir mensagens em lote');
+          toast.error(extractErrorMessage(error, 'Erro ao excluir mensagens em lote'));
         } finally {
           setProcessing(false);
         }
@@ -220,7 +250,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       if (onSuccess) onSuccess();
       onRefresh();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erro ao atribuir grupos em lote');
+      toast.error(extractErrorMessage(error, 'Erro ao atribuir grupos em lote'));
     } finally {
       setProcessing(false);
     }
@@ -239,7 +269,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
       if (onSuccess) onSuccess();
       onRefresh();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erro ao duplicar mensagens em lote');
+      toast.error(extractErrorMessage(error, 'Erro ao duplicar mensagens em lote'));
     } finally {
       setProcessing(false);
     }
@@ -250,6 +280,7 @@ export const useScheduling = (onRefresh, mensagens = []) => {
     searchTerm, setSearchTerm,
     activeDay, setActiveDay,
     activeTag, setActiveTag,
+    activeType, setActiveType,
     novaMensagem, setNovaMensagem,
     editingId, processing,
     file, setFile, previewUrl, setPreviewUrl, uploadProgress,

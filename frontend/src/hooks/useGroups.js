@@ -19,7 +19,12 @@ const initialGroupState = {
   seguranca_adms_ativa: false,
   remover_impostor_msg: true,
   msg_remocao_impostor: '',
-  numero_fantasma_ativo: false
+  numero_fantasma_ativo: false,
+  webhook_enquete_ativo: false,
+  webhook_enquete_url: '',
+  webhook_enquete_delay_segundos: 0,
+  webhook_enquete_modo: 'todas',
+  webhook_enquete_ids: ''
 };
 
 export const useGroups = (onRefresh, setGrupos, openConfirm) => {
@@ -145,7 +150,12 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
       seguranca_adms_ativa: grupo.seguranca_adms_ativa !== undefined ? Boolean(grupo.seguranca_adms_ativa) : false,
       remover_impostor_msg: grupo.remover_impostor_msg !== undefined ? Boolean(grupo.remover_impostor_msg) : true,
       msg_remocao_impostor: grupo.msg_remocao_impostor || '',
-      numero_fantasma_ativo: grupo.numero_fantasma_ativo !== undefined ? Boolean(grupo.numero_fantasma_ativo) : false
+      numero_fantasma_ativo: grupo.numero_fantasma_ativo !== undefined ? Boolean(grupo.numero_fantasma_ativo) : false,
+      webhook_enquete_ativo: grupo.webhook_enquete_ativo !== undefined ? Boolean(grupo.webhook_enquete_ativo) : false,
+      webhook_enquete_url: grupo.webhook_enquete_url || '',
+      webhook_enquete_delay_segundos: grupo.webhook_enquete_delay_segundos !== undefined ? parseInt(grupo.webhook_enquete_delay_segundos, 10) : 0,
+      webhook_enquete_modo: grupo.webhook_enquete_modo || 'todas',
+      webhook_enquete_ids: grupo.webhook_enquete_ids || ''
     });
     setActiveSubTab('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -221,11 +231,13 @@ export const useGroups = (onRefresh, setGrupos, openConfirm) => {
     }
   };
 
-  const extrairContatosAgora = async (grupoId, grupoNome = '') => {
+  const extrairContatosAgora = async (grupoId, grupoNome = '', forcarReenvio = false) => {
     const toastId = toastExtraindo(grupoNome);
     setProcessing(true);
     try {
-      const res = await axiosInstance.post(`/grupos/${grupoId}/extrair-contatos`);
+      const res = await axiosInstance.post(`/grupos/${grupoId}/extrair-contatos`, {
+        forcar_reenvio_webhook: !!forcarReenvio
+      });
       toast.dismiss(toastId);
       onRefresh();
       window.dispatchEvent(new CustomEvent('config-updated'));

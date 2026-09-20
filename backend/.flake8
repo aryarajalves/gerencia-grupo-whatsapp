@@ -1,0 +1,30 @@
+[flake8]
+max-line-length = 120
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    scripts,
+    *.bak,
+    check_media_db.py,
+    debug_auth.py,
+    force_sync.py
+ignore =
+    # Line too long (handled by formatting)
+    E501,
+    # Whitespace before ':'
+    E203,
+    # Line break before binary operator
+    W503,
+    # Module level import not at top of file (used for conditional/mock setups)
+    E402
+per-file-ignores =
+    tests/*: F401,F841
+select =
+    # Syntax errors and undefined variables
+    E9,F63,F7,F82,
+    # Undefined names
+    F821,
+    # Unused imports and unused variables
+    F401,F841

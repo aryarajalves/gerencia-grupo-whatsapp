@@ -13,6 +13,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
     searchTerm, setSearchTerm,
     activeDay, setActiveDay,
     activeTag, setActiveTag,
+    activeType, setActiveType,
     novaMensagem, setNovaMensagem,
     editingId, processing,
     file, setFile, previewUrl, setPreviewUrl, uploadProgress,
@@ -205,6 +206,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
           handleFileChange={handleFileChange}
           grupos={grupos || []}
           mensagens={mensagens || []}
+          onNavigateMessage={startEdit}
         />
       ) : (
         <MessagesList 
@@ -216,6 +218,8 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
           setActiveDay={setActiveDay}
           activeTag={activeTag}
           setActiveTag={setActiveTag}
+          activeType={activeType}
+          setActiveType={setActiveType}
           onEdit={startEdit}
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
@@ -235,6 +239,7 @@ const AgendarMensagens = ({ mensagens, grupos, onRefresh, openConfirm }) => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImportSuccess={onRefresh}
+        grupos={grupos || []}
       />
     </div>
   );

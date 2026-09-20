@@ -7,6 +7,7 @@ import UserTable from './components/UserTable';
 import InviteTable from './components/InviteTable';
 import InviteModal from './components/InviteModal';
 import ResetModal from './components/ResetModal';
+import UserModal from './components/UserModal';
 
 const GestaoUsuarios = ({ openConfirm }) => {
     const {
@@ -21,7 +22,12 @@ const GestaoUsuarios = ({ openConfirm }) => {
         setShowInviteModal,
         showResetModal,
         setShowResetModal,
+        showEditModal,
+        setShowEditModal,
         selectedUser,
+        editUser,
+        setEditUser,
+        submittingEdit,
         toast,
         filteredUsers,
         currentPage,
@@ -32,6 +38,8 @@ const GestaoUsuarios = ({ openConfirm }) => {
         handleDeleteInvite,
         toggleStatus,
         startResetPassword,
+        startEditUser,
+        handleUpdateUser,
         refreshInvites
     } = useUsers(openConfirm);
 
@@ -93,7 +101,8 @@ const GestaoUsuarios = ({ openConfirm }) => {
 
                     <UserTable 
                         filteredUsers={filteredUsers}
-                        startEditUser={startResetPassword}
+                        startEditUser={startEditUser}
+                        startResetPassword={startResetPassword}
                         toggleStatus={toggleStatus}
                         handleDeleteUser={handleDeleteUser}
                         currentPage={currentPage}
@@ -128,6 +137,15 @@ const GestaoUsuarios = ({ openConfirm }) => {
                     if (!show) refreshInvites();
                 }}
                 user={selectedUser}
+            />
+
+            <UserModal 
+                showModal={showEditModal}
+                setShowModal={setShowEditModal}
+                editUser={editUser}
+                setEditUser={setEditUser}
+                handleSaveUser={handleUpdateUser}
+                submitting={submittingEdit}
             />
 
             {toast.show && (

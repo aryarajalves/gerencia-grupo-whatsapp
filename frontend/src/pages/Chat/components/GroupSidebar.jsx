@@ -32,7 +32,9 @@ const GroupSidebar = ({
     setPinnedJids(updated);
     try {
       localStorage.setItem('zap_pinned_groups', JSON.stringify(updated));
-    } catch (err) {}
+    } catch (_err) {
+      // Ignora falha de acesso ao localStorage
+    }
   };
 
   // Filtragem por aba (Todos, Grupos, Privado)

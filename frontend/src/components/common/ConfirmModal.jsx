@@ -2,8 +2,28 @@ import React from 'react';
 import { AlertCircle, Info, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import ModalPortal from './ModalPortal';
 
-const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'danger', hideCancel = false, confirmText = null }) => {
+const ConfirmModal = ({ 
+  show, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  type = 'danger', 
+  hideCancel = false, 
+  confirmText = null, 
+  confirmTextChecked = null,
+  checkboxLabel = null,
+  checkboxDescription = null,
+  defaultCheckboxChecked = false,
+  zIndex = 11000 
+}) => {
   if (!show) return null;
+
+  const [checkboxChecked, setCheckboxChecked] = React.useState(defaultCheckboxChecked);
+
+  React.useEffect(() => {
+    setCheckboxChecked(defaultCheckboxChecked);
+  }, [show, defaultCheckboxChecked]);
 
   const getConfig = () => {
     switch (type) {
@@ -40,12 +60,15 @@ const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'dange
 
   const config = getConfig();
   const isAlertOnly = hideCancel || !onCancel;
+  const finalConfirmText = (checkboxChecked && confirmTextChecked) 
+    ? confirmTextChecked 
+    : (confirmText || (type === 'danger' ? 'Excluir Agora' : 'Confirmar'));
 
   return (
     <ModalPortal>
-      <div className="fullscreen-modal-overlay" style={{ alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div className="fullscreen-modal-overlay" style={{ alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex }}>
         <div className="card fade-in" style={{ 
-          maxWidth: '400px', 
+          maxWidth: '430px', 
           width: '100%', 
           textAlign: 'center', 
           padding: 'var(--modal-padding)', 
@@ -75,8 +98,48 @@ const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'dange
           </div>
 
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}>{title}</h3>
-          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.5' }}>{message}</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: checkboxLabel ? '1.25rem' : '1.75rem', lineHeight: '1.5' }}>{message}</p>
           
+          {checkboxLabel && (
+            <div 
+              data-testid="confirm-modal-checkbox-container"
+              onClick={() => setCheckboxChecked(!checkboxChecked)}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                textAlign: 'left',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                background: checkboxChecked ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                border: `1px solid ${checkboxChecked ? 'rgba(59, 130, 246, 0.45)' : 'rgba(255, 255, 255, 0.08)'}`,
+                marginBottom: '1.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                userSelect: 'none'
+              }}
+            >
+              <input 
+                type="checkbox"
+                data-testid="confirm-modal-checkbox"
+                checked={checkboxChecked}
+                onChange={(e) => setCheckboxChecked(e.target.checked)}
+                style={{ marginTop: '2px', cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary, #3b82f6)' }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: checkboxChecked ? '#93c5fd' : '#fff', lineHeight: 1.3 }}>
+                  {checkboxLabel}
+                </div>
+                {checkboxDescription && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', lineHeight: 1.4 }}>
+                    {checkboxDescription}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '10px' }}>
             {!isAlertOnly && (
               <button 
@@ -95,9 +158,9 @@ const ConfirmModal = ({ show, title, message, onConfirm, onCancel, type = 'dange
                 justifyContent: 'center', fontWeight: 800,
                 boxShadow: `0 8px 20px ${config.bg}`
               }} 
-              onClick={onConfirm}
+              onClick={() => onConfirm && onConfirm(checkboxChecked)}
             >
-              {confirmText || (type === 'danger' ? 'Excluir Agora' : 'Confirmar')}
+              {finalConfirmText}
             </button>
           </div>
         </div>

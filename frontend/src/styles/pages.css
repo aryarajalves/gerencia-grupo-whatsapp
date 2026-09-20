@@ -3,24 +3,178 @@
   width: 100vw;
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: var(--bg-dark);
   position: relative;
   overflow-y: auto;
-  padding: 2rem 1rem 4rem 1rem;
+  padding: 2rem 1.5rem;
 }
 
 .login-bg-decoration {
   position: absolute;
   top: -10%;
   right: -10%;
-  width: 50%;
-  height: 60%;
-  background: radial-gradient(circle at center, rgba(var(--primary-rgb), 0.15) 0, transparent 70%);
+  width: 55%;
+  height: 65%;
+  background: radial-gradient(circle at center, rgba(var(--primary-rgb), 0.18) 0, rgba(16, 185, 129, 0.08) 40%, transparent 75%);
   z-index: 1;
   pointer-events: none;
+  filter: blur(40px);
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem;
+  z-index: 10;
+  margin: auto;
+}
+
+.login-card-container {
+  flex: 1;
+  max-width: 440px;
+  width: 100%;
+}
+
+.login-hero-container {
+  flex: 1.25;
+  max-width: 580px;
+  width: 100%;
+  display: flex;
+}
+
+.login-hero-card {
+  position: relative;
+  width: 100%;
+  background: rgba(18, 20, 29, 0.7);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 1.75rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-hero-glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.login-hero-image-frame {
+  width: 100%;
+  height: 260px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.login-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.6s ease;
+}
+
+.login-hero-card:hover .login-hero-img {
+  transform: scale(1.03);
+}
+
+.login-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.login-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 0.35rem 0.85rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-hero-content h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.login-hero-content p {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.login-hero-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hero-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.45rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.hero-feature-item .feature-icon {
+  color: var(--primary);
+}
+
+.login-subtitle {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+/* Responsividade do Login */
+@media (max-width: 960px) {
+  .login-wrapper {
+    flex-direction: column;
+    gap: 2rem;
+  }
+  .login-hero-container {
+    display: none;
+  }
+  .login-card-container {
+    max-width: 480px;
+  }
 }
 
 .login-container {
@@ -37,7 +191,7 @@
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  padding: 1.5rem 1.75rem;
+  padding: 2rem 2.25rem;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   width: 100%;
 }

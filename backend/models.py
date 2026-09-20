@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Date, Time, Boolean, ForeignKey, Text, DateTime
+from sqlalchemy import Column, String, Integer, Time, Boolean, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -66,6 +66,11 @@ class GrupoWhatsApp(Base):
     remover_impostor_msg = Column(Boolean, default=True)  # Se deve remover do grupo quem enviar msg não autorizada
     msg_remocao_impostor = Column(Text, nullable=True)  # Template da mensagem de alerta (Ex: "🚫 [ALERTA] O participante @{numero}...")
     numero_fantasma_ativo = Column(Boolean, default=False)  # Toggle para ativar/desativar monitoramento do número fantasma neste grupo
+    webhook_enquete_ativo = Column(Boolean, default=False)  # Toggle para ativar/desativar webhook de respostas de enquetes
+    webhook_enquete_url = Column(String, nullable=True)  # URL para envio dos votos/respostas de enquetes do grupo
+    webhook_enquete_delay_segundos = Column(Integer, default=0)  # Delay/debounce em segundos antes do envio (0=imediato)
+    webhook_enquete_modo = Column(String, default="todas")  # "todas" = Todas as enquetes | "selecionadas" = Apenas enquetes programadas marcadas
+    webhook_enquete_ids = Column(Text, nullable=True)  # JSON com lista de IDs das mensagens de enquetes selecionadas
 
 
 class MensagemDisparada(Base):
@@ -81,6 +86,7 @@ class MensagemDisparada(Base):
     link_midia = Column(String, nullable=True) # URL do S3/Upload
     opcoes_enquete = Column(Text, nullable=True) # Opções separadas por vírgula ou JSON
     enquete_multipla = Column(Boolean, default=False)
+    webhook_enquete_ativo = Column(Boolean, default=True) # Se respostas desta enquete programada disparam webhook
     admin_only_settings = Column(Boolean, nullable=True) # None=Manter atual, True=Restringir aos admins, False=Liberar para todos
     etiqueta = Column(String(50), nullable=True)
     status = Column(String, default="pendente")
@@ -212,3 +218,19 @@ class Invitation(Base):
     usado = Column(Boolean, default=False)
     expira_em = Column(DateTime, nullable=True) # NULL = Ilimitado
     criado_em = Column(DateTime, default=get_br_time)
+
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    email = Column(String, index=True)
+    codigo = Column(String, index=True) # Código de 6 dígitos
+    nome = Column(String)
+    senha_hash = Column(String) # Hash Argon2id
+    cargo = Column(String)
+    token_convite = Column(String, index=True)
+    expira_em = Column(DateTime)
+    usado = Column(Boolean, default=False)
+    criado_em = Column(DateTime, default=get_br_time)
+

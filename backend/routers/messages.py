@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
@@ -9,6 +9,9 @@ from sqlalchemy import or_
 import models, schemas, security
 from database import get_db
 from client_context import get_active_client_id
+from core.logger import logger
+from services.ai_service import parse_roteiro_com_ia
+from services.file_extractor import extrair_texto_de_arquivo
 
 router = APIRouter(tags=["Mensagens"])
 
@@ -93,22 +96,8 @@ def atualizar_mensagem(mensagem_id: uuid.UUID, mensagem: schemas.MensagemDispara
     db_msg.grupo_ids = [g.id for g in db_msg.grupos]
     return db_msg
 
-@router.delete("/mensagens/{mensagem_id}", dependencies=[Depends(security.get_api_key)])
-def deletar_mensagem(mensagem_id: uuid.UUID, db: Session = Depends(get_db)):
-    cid = get_active_client_id(db)
-    db_msg = db.query(models.MensagemDisparada).filter(
-        models.MensagemDisparada.id == mensagem_id,
-        or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None))
-    ).first()
-    
-    if not db_msg:
-        raise HTTPException(status_code=404, detail="Mensagem não encontrada")
-        
-    db.delete(db_msg)
-    db.commit()
-    return {"message": "Mensagem deletada com sucesso"}
-
 @router.delete("/mensagens/bulk", dependencies=[Depends(security.get_api_key)])
+@router.post("/mensagens/bulk-delete", dependencies=[Depends(security.get_api_key)])
 def deletar_mensagens_bulk(payload: schemas.MensagemBulkDelete, db: Session = Depends(get_db)):
     cid = get_active_client_id(db)
     if not payload.ids:
@@ -149,6 +138,21 @@ def atribuir_grupos_bulk(payload: schemas.MensagemBulkAssignGroups, db: Session 
     db.commit()
     return {"message": f"Grupos atualizados para {len(mensagens)} mensagem(ns)", "updated_count": len(mensagens)}
 
+@router.delete("/mensagens/{mensagem_id}", dependencies=[Depends(security.get_api_key)])
+def deletar_mensagem(mensagem_id: uuid.UUID, db: Session = Depends(get_db)):
+    cid = get_active_client_id(db)
+    db_msg = db.query(models.MensagemDisparada).filter(
+        models.MensagemDisparada.id == mensagem_id,
+        or_(models.MensagemDisparada.cliente_id == cid, models.MensagemDisparada.cliente_id.is_(None))
+    ).first()
+    
+    if not db_msg:
+        raise HTTPException(status_code=404, detail="Mensagem não encontrada")
+        
+    db.delete(db_msg)
+    db.commit()
+    return {"message": "Mensagem deletada com sucesso"}
+
 @router.post("/mensagens/bulk-duplicate", dependencies=[Depends(security.get_api_key)])
 def duplicar_mensagens_bulk(payload: schemas.MensagemBulkDuplicate, db: Session = Depends(get_db)):
     cid = get_active_client_id(db)
@@ -179,6 +183,7 @@ def duplicar_mensagens_bulk(payload: schemas.MensagemBulkDuplicate, db: Session 
             link_midia=msg.link_midia,
             opcoes_enquete=msg.opcoes_enquete,
             enquete_multipla=msg.enquete_multipla,
+            webhook_enquete_ativo=getattr(msg, 'webhook_enquete_ativo', True),
             admin_only_settings=msg.admin_only_settings,
             etiqueta=msg.etiqueta,
             status="pendente",
@@ -229,6 +234,7 @@ def exportar_mensagens(db: Session = Depends(get_db)):
             "link_midia": m.link_midia or "",
             "opcoes_enquete": m.opcoes_enquete or "",
             "enquete_multipla": getattr(m, 'enquete_multipla', False) or False,
+            "webhook_enquete_ativo": getattr(m, 'webhook_enquete_ativo', True) if getattr(m, 'webhook_enquete_ativo', None) is not None else True,
             "admin_only_settings": getattr(m, 'admin_only_settings', None),
             "etiqueta": m.etiqueta or "",
             "ativo": m.ativo if m.ativo is not None else True
@@ -241,12 +247,61 @@ def exportar_mensagens(db: Session = Depends(get_db)):
         "items": export_items
     }
 
+@router.post("/mensagens/parse-roteiro-ia", dependencies=[Depends(security.get_api_key)])
+def parse_roteiro_ia(payload: dict, db: Session = Depends(get_db)):
+    cid = get_active_client_id(db)
+    texto = payload.get("texto", "")
+    if not texto or not texto.strip():
+        raise HTTPException(status_code=400, detail="Por favor, forneça o texto do roteiro a ser processado.")
+
+    # Busca grupos ativos do cliente para correlacionar
+    grupos_db = db.query(models.GrupoWhatsApp).filter(
+        models.GrupoWhatsApp.cliente_id == cid,
+        models.GrupoWhatsApp.ativo == True
+    ).all()
+    grupos_info = [{"id": str(g.id), "nome": g.nome} for g in grupos_db]
+
+    try:
+        mensagens_extraidas = parse_roteiro_com_ia(texto, grupos_disponiveis=grupos_info)
+        return {
+            "total": len(mensagens_extraidas),
+            "mensagens": mensagens_extraidas
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"[PARSE ROTEIRO IA] Erro inesperado: {exc}")
+        raise HTTPException(status_code=500, detail="Erro interno ao processar o roteiro com IA.")
+
+@router.post("/mensagens/extrair-texto-arquivo", dependencies=[Depends(security.get_api_key)])
+async def extrair_texto_arquivo(file: UploadFile = File(...)):
+    """
+    Recebe um arquivo (.pdf, .docx, .doc, .txt) e extrai o texto contido nele
+    para ser utilizado no fluxo de importação e interpretação com IA.
+    """
+    try:
+        conteudo_bytes = await file.read()
+        texto = extrair_texto_de_arquivo(conteudo_bytes, file.filename or "")
+        return {
+            "filename": file.filename,
+            "tamanho_bytes": len(conteudo_bytes),
+            "texto": texto
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"[EXTRAIR TEXTO ARQUIVO] Erro inesperado ao processar arquivo: {exc}")
+        raise HTTPException(status_code=500, detail="Erro interno ao processar o arquivo enviado.")
+
 @router.post("/mensagens/import", dependencies=[Depends(security.get_api_key)])
 def importar_mensagens(payload: dict, db: Session = Depends(get_db)):
     cid = get_active_client_id(db)
     items = payload.get("items") or payload.get("mensagens") or []
     if not isinstance(items, list) or not items:
         raise HTTPException(status_code=400, detail="Arquivo ou lista de mensagens inválida.")
+
+    # Grupos globais passados no payload raiz, se houver
+    global_grupo_ids = payload.get("grupo_ids") or []
 
     imported_count = 0
     for item in items:
@@ -263,6 +318,12 @@ def importar_mensagens(payload: dict, db: Session = Depends(get_db)):
         except Exception:
             horario = time(12, 0, 0)
 
+        opcoes = item.get("opcoes_enquete", "")
+        if isinstance(opcoes, list):
+            opcoes_str = ", ".join([str(op).strip() for op in opcoes if str(op).strip()])
+        else:
+            opcoes_str = str(opcoes) if opcoes else ""
+
         db_msg = models.MensagemDisparada(
             cliente_id=cid,
             mensagem=item.get("mensagem", ""),
@@ -271,13 +332,30 @@ def importar_mensagens(payload: dict, db: Session = Depends(get_db)):
             horario_do_disparo=horario,
             tipo_de_mensagem=item.get("tipo_de_mensagem", "texto"),
             link_midia=item.get("link_midia", ""),
-            opcoes_enquete=item.get("opcoes_enquete", ""),
+            opcoes_enquete=opcoes_str,
             enquete_multipla=bool(item.get("enquete_multipla", False)),
             admin_only_settings=item.get("admin_only_settings"),
             etiqueta=item.get("etiqueta") or None,
             ativo=bool(item.get("ativo", True))
         )
         db.add(db_msg)
+        db.flush()
+
+        # Associação explícita a grupos
+        target_group_ids = item.get("grupo_ids") or global_grupo_ids
+        if isinstance(target_group_ids, list):
+            for gid in target_group_ids:
+                try:
+                    gid_uuid = uuid.UUID(str(gid))
+                    g_exists = db.query(models.GrupoWhatsApp).filter(
+                        models.GrupoWhatsApp.id == gid_uuid,
+                        models.GrupoWhatsApp.cliente_id == cid
+                    ).first()
+                    if g_exists:
+                        db.add(models.GrupoMensagem(grupo_id=gid_uuid, mensagem_id=db_msg.id))
+                except (ValueError, TypeError):
+                    continue
+
         imported_count += 1
 
     db.commit()

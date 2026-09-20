@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
-from datetime import date, datetime, time
+from datetime import date, time
 from sqlalchemy import func, or_
 
 import models, schemas, security, scheduler
@@ -178,6 +178,12 @@ def reenviar_log(log_id: uuid.UUID, db: Session = Depends(get_db)):
     ).first()
     if not grupo:
         raise HTTPException(status_code=404, detail=f"Grupo '{log.grupo_nome}' não encontrado.")
+        
+    if not getattr(grupo, 'ativo', True):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Não é possível reenviar o disparo: o grupo '{grupo.nome}' está pausado. Ative o grupo na aba Grupos antes de tentar novamente."
+        )
         
     mensagem = None
     if log.mensagem_id:

@@ -7,7 +7,10 @@ export const useUsers = (openConfirm) => {
     const [cargoFilter, setCargoFilter] = useState('');
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showResetModal, setShowResetModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [editUser, setEditUser] = useState({ id: null, nome: '', email: '', cargo: 'ADMIN', password: '' });
+    const [submittingEdit, setSubmittingEdit] = useState(false);
     const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
 
     const showToast = (message, type = 'info') => {
@@ -44,6 +47,36 @@ export const useUsers = (openConfirm) => {
     const startResetPassword = (user) => {
         setSelectedUser(user);
         setShowResetModal(true);
+    };
+
+    const startEditUser = (user) => {
+        setEditUser({
+            id: user.id,
+            nome: user.nome || '',
+            email: user.email || '',
+            cargo: user.cargo || 'ADMIN'
+        });
+        setShowEditModal(true);
+    };
+
+    const handleUpdateUser = async (e) => {
+        e.preventDefault();
+        setSubmittingEdit(true);
+        try {
+            const payload = {
+                nome: editUser.nome,
+                email: editUser.email,
+                cargo: editUser.cargo
+            };
+            await axiosInstance.put(`/usuarios/${editUser.id}`, payload);
+            setShowEditModal(false);
+            fetchUsers();
+            showToast("Usuário atualizado com sucesso!", "success");
+        } catch (err) {
+            showToast(err.response?.data?.detail || "Erro ao atualizar usuário", "error");
+        } finally {
+            setSubmittingEdit(false);
+        }
     };
 
     const handleDeleteUser = async (id) => {
@@ -123,7 +156,12 @@ export const useUsers = (openConfirm) => {
         setShowInviteModal,
         showResetModal,
         setShowResetModal,
+        showEditModal,
+        setShowEditModal,
         selectedUser,
+        editUser,
+        setEditUser,
+        submittingEdit,
         toast,
         filteredUsers,
         currentPage,
@@ -134,6 +172,8 @@ export const useUsers = (openConfirm) => {
         handleDeleteInvite,
         toggleStatus,
         startResetPassword,
+        startEditUser,
+        handleUpdateUser,
         refreshInvites: fetchInvites
     };
 };

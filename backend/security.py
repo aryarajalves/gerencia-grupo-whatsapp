@@ -4,15 +4,24 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import os
-import uuid
 
 # Configurações de Senha
-# Monkeypatch para corrigir bug do bcrypt com passlib
+# Monkeypatch para compatibilidade do bcrypt com passlib se necessário
 import bcrypt
 if not hasattr(bcrypt, "__about__"):
     bcrypt.__about__ = type('about', (object,), {'__version__': getattr(bcrypt, '__version__', '4.0.1')})
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configuração de Hashing de Senhas:
+# Argon2id como algoritmo padrão (Memory-Hard, 64MB RAM por tentativa, imune a quebras paralelas por GPU)
+# Bcrypt mantido para verificação retrocompatível de senhas existentes
+pwd_context = CryptContext(
+    schemes=["argon2", "bcrypt"],
+    deprecated="auto",
+    argon2__type="ID",
+    argon2__memory_cost=65536,  # 64 MB de memória alocada
+    argon2__time_cost=3,        # 3 iterações
+    argon2__parallelism=4       # 4 threads em paralelo
+)
 
 # Configurações de JWT
 # Em produção, essa chave DEVE vir da variável de ambiente JWT_SECRET no .env
@@ -29,6 +38,10 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash(password):
     return pwd_context.hash(password)
+
+def needs_rehash(hashed_password):
+    if not hashed_password: return True
+    return pwd_context.needs_update(hashed_password)
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()

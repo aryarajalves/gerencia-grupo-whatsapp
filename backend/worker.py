@@ -1,12 +1,10 @@
 import time
 import signal
 import sys
-import os
 from datetime import datetime
 
 import scheduler
 from core.logger import logger
-import database
 import migrations
 
 def main():

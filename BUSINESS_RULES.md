@@ -102,7 +102,8 @@
 
 - Cada grupo pode ter uma URL de webhook externa configurada em `webhook_extracao_url`.
 - Durante a extração periódica de contatos, novos contatos inseridos são enviados via `POST` com `{nome, numero, grupo, grupo_jid, extraido_em}`.
-- O campo `webhook_enviado` na tabela `contatos_grupos` garante que nenhum contato seja enviado mais de uma vez para o webhook.
+- O campo `webhook_enviado` na tabela `contatos_grupos` garante que nenhum contato seja enviado mais de uma vez para o webhook no fluxo padrão.
+- **Forçar Reenvio Manual:** Na extração manual de contatos de um grupo, o usuário possui a opção de marcar *"Disparar webhook para todos os membros"*. Quando ativada, o sistema ignora o histórico de envios anteriores (`webhook_enviado`) e dispara novamente o webhook para todos os participantes do grupo, **sempre mantendo a exclusão obrigatória de administradores** (`not p_admin`). Administradores nunca são despachados para o webhook.
 
 ---
 
@@ -152,3 +153,47 @@
 - **Detecção de Novo Administrador na Sincronização:** Quando a lista de participantes é sincronizada e um novo administrador é identificado em grupo fechado sem constar na lista de segurança:
   1. **Apenas Registro de Alerta:** O sistema registra um log de auditoria do tipo `seguranca_adm` no histórico de logs informando o ocorrido.
   2. **Sem Ações Destrutivas:** O sistema NÃO remove nem rebaixa o participante do grupo no WhatsApp, pois o novo administrador pode ser um usuário legítimo promovido pela equipe.
+
+---
+
+## 13. Webhook de Respostas de Enquetes por Grupo
+
+- **Configuração Individual:** Cada grupo de WhatsApp pode ter sua própria automação de Webhook de Enquetes ativada (`webhook_enquete_ativo == True`), com uma URL de destino (`webhook_enquete_url`), tempo de espera/debounce (`webhook_enquete_delay_segundos`), escopo de enquetes (`webhook_enquete_modo`) e lista de enquetes selecionadas (`webhook_enquete_ids`).
+- **Modos de Escopo de Enquetes (`webhook_enquete_modo`):**
+  - **`todas` (Padrão):** O webhook é disparado para **todas as enquetes** do grupo (tanto enquetes criadas manualmente direto no aplicativo do WhatsApp quanto enquetes agendadas pelo painel).
+  - **`selecionadas`:** O webhook é disparado **exclusivamente para as enquetes programadas selecionadas na lista do grupo** (`webhook_enquete_ids`). Se nenhuma enquete for selecionada explicitamente, apenas enquetes agendadas com a flag `webhook_enquete_ativo == True` disparam. Enquetes manuais ou não vinculadas são ignoradas.
+- **Seleção Visual na Aba do Grupo:** Quando o administrador escolhe a opção *"Apenas Enquetes Programadas / Selecionadas"*, uma lista interativa exibe todas as enquetes cadastradas com título, dia/horário de disparo e preview das opções, permitindo marcar individualmente quais enquetes devem disparar dados para o webhook deste grupo, com botões de *"Selecionar Todas"* e *"Desmarcar Todas"*.
+- **Debounce e Consolidação de Voto:** Para evitar múltiplos disparos caso o participante clique em uma opção e logo em seguida troque de ideia ou remarque outra opção, o sistema pode aguardar o tempo configurado (ex: 60 segundos). Se o participante alterar seu voto durante o intervalo, o temporizador reinicia e apenas a **opção final mais recente** é enviada 1 única vez para o webhook. Se configurado como `0`, o envio é imediato.
+- **Decriptação Criptográfica Ponta a Ponta:** Como o WhatsApp envia os votos de enquetes criptografados com AES-GCM e HKDF (SHA-256), o sistema descriptografa o `encPayload` em tempo real comparando com os hashes das opções cadastradas, identificando com precisão a escolha do usuário ou se o voto foi desmarcado.
+- **Estrutura do Payload Enviado:**
+  - `evento`: `"voto_enquete"`
+  - `grupo`: `{ id, nome, jid }`
+  - `usuario`: `{ nome, numero, jid }`
+  - `enquete`: `{ id_mensagem_enquete, titulo, opcao_marcada, opcoes_marcadas, todas_opcoes }`
+  - `data_hora`: Data e horário no fuso de Brasília (`America/Sao_Paulo`).
+  - `raw_data`: Dados originais do evento recebido.
+- **Tolerância e Resiliência:** Falhas ou timeouts na URL do webhook externo são registradas nos logs e não bloqueiam o fluxo do sistema.
+
+---
+
+## 14. Importação de Roteiro de Mensagens com Inteligência Artificial (LLM)
+
+- **Entrada de Texto Livre:** O usuário pode colar roteiros completos de mensagens em texto corrido (sem formatação rígida prévia).
+- **Provedor e Modelo:** A extração utiliza a API da OpenAI com modelo padrão `gpt-4o-mini` e a chave única `OPENAI_API_KEY` configurada no `.env` do backend (compartilhada entre todas as funções de IA do sistema).
+- **Campos Extraídos pela IA:**
+  - `dia_do_lancamento`: Número inteiro referente ao dia do ciclo (ex: Dia 1, Dia 2). Se omitido no texto, assume 1.
+  - `horario_do_disparo`: Horário no formato `HH:MM` ou `HH:MM:SS`.
+  - `tipo_de_mensagem`: Classificado entre `texto`, `imagem`, `audio`, `video`, `arquivo` ou `enquete`.
+  - `mensagem`: Texto completo da mensagem a ser disparada.
+  - `link_midia`: URL extraída do texto caso fornecida.
+  - `opcoes_enquete`: Lista de opções separadas para votação (se tipo for `enquete`).
+  - `grupo_identificado`: Nome ou menção ao grupo de destino identificado no texto.
+- **Associação a Grupos:**
+  - A interface permite selecionar grupos de destino padrão antes de processar.
+  - Se a IA identificar menção explícita ao nome de um grupo existente no texto da mensagem, ela vincula preferencialmente a esse grupo; caso contrário, aplica os grupos padrão selecionados.
+- **Pré-visualização Obrigatória:** Antes de persistir qualquer mensagem no banco de dados, o sistema apresenta uma tela de revisão (cards/tabela) permitindo ao usuário:
+  - Conferir e editar qualquer campo (dia, horário, tipo, texto, mídia).
+  - Ajustar ou alterar os grupos atribuídos a cada mensagem.
+  - Excluir mensagens indesejadas antes de clicar em "Salvar e Importar Roteiro".
+- **Associação Explícita no Banco:** Todas as mensagens importadas gravam obrigatoriamente suas associações na tabela `grupo_mensagens`, respeitando a regra da Seção 3.
+

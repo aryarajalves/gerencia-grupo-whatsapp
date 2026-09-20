@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import GroupsTable from '../pages/Groups/components/GroupsTable';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 describe('GroupsTable - Botão de Extração Manual de Contatos', () => {
   it('renderiza o botão Extrair Contatos Agora e aciona a função extrairContatosAgora', () => {
@@ -75,8 +76,57 @@ describe('GroupsTable - Botão de Extração Manual de Contatos', () => {
     expect(openConfirm).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Extrair Contatos Manualmente',
       type: 'info',
-      confirmText: 'Extrair Agora'
+      confirmText: 'Extrair Agora',
+      confirmTextChecked: 'Reenviar para Todos',
+      checkboxLabel: 'Disparar webhook para todos os membros',
+      defaultCheckboxChecked: false
     }));
+
+    // Simula confirmação com checkbox marcado (forcarReenvio=true)
+    const modalProps = openConfirm.mock.calls[0][0];
+    modalProps.onConfirm(true);
+    expect(extrairContatosAgora).toHaveBeenCalledWith('g-100', 'Grupo Teste Manual', true);
+  });
+});
+
+describe('ConfirmModal - Checkbox Interativo de Forçar Reenvio', () => {
+  it('renderiza o checkbox e atualiza o texto do botão de ação ao alternar', () => {
+    const onConfirmMock = vi.fn();
+    const onCancelMock = vi.fn();
+
+    render(
+      <ConfirmModal
+        show={true}
+        title="Extrair Contatos Manualmente"
+        message="Deseja iniciar a busca e sincronização?"
+        type="info"
+        confirmText="Extrair Agora"
+        confirmTextChecked="Reenviar para Todos"
+        checkboxLabel="Disparar webhook para todos os membros"
+        checkboxDescription="Reenvia o webhook mesmo para quem já foi disparado."
+        defaultCheckboxChecked={false}
+        onConfirm={onConfirmMock}
+        onCancel={onCancelMock}
+      />
+    );
+
+    expect(screen.getByText('Disparar webhook para todos os membros')).toBeInTheDocument();
+    expect(screen.getByText('Reenvia o webhook mesmo para quem já foi disparado.')).toBeInTheDocument();
+
+    const checkbox = screen.getByTestId('confirm-modal-checkbox');
+    expect(checkbox).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Extrair Agora' })).toBeInTheDocument();
+
+    // Clica no container para marcar o checkbox
+    const container = screen.getByTestId('confirm-modal-checkbox-container');
+    fireEvent.click(container);
+
+    expect(checkbox).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Reenviar para Todos' })).toBeInTheDocument();
+
+    // Clica no botão de confirmação
+    fireEvent.click(screen.getByRole('button', { name: 'Reenviar para Todos' }));
+    expect(onConfirmMock).toHaveBeenCalledWith(true);
   });
 });
 

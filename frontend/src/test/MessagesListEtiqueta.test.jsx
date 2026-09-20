@@ -93,12 +93,21 @@ describe('Funcionalidade de Etiqueta / Tag em Mensagens', () => {
       />
     );
 
-    const selectDropdown = screen.getByRole('combobox');
-    expect(selectDropdown).toBeInTheDocument();
+    const inputEtiqueta = screen.getByPlaceholderText('Digite ou escolha uma etiqueta...');
+    expect(inputEtiqueta).toBeInTheDocument();
+
+    // Ao focar ou clicar no input, o dropdown bonito abre
+    fireEvent.focus(inputEtiqueta);
+
+    // Deve exibir as opções de etiquetas cadastradas
+    expect(screen.getByText('Etiquetas cadastradas')).toBeInTheDocument();
     expect(screen.getByText('Oferta')).toBeInTheDocument();
     expect(screen.getByText('Lembrete')).toBeInTheDocument();
 
-    fireEvent.change(selectDropdown, { target: { value: 'Lembrete' } });
+    // Clica na opção 'Lembrete'
+    const opcaoLembrete = screen.getByText('Lembrete');
+    fireEvent.click(opcaoLembrete);
+
     expect(setNovaMensagem).toHaveBeenCalledWith(expect.objectContaining({ etiqueta: 'Lembrete' }));
   });
 

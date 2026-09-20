@@ -54,8 +54,8 @@ def test_mensagem_sem_grupo_nao_dispara(db_session):
         msg_com_grupo.grupos = [grupo]
         db_session.commit()
         
-        # 5. Mockar o envio real para a W-API para apenas contar as chamadas
-        with patch("scheduler.enviar_wapi") as mock_send:
+        # 5. Mockar o envio real para a W-API para apenas contar as chamadas (e simular queue indisponível para testar síncrono)
+        with patch("services.queue_service.is_queue_available", return_value=False), patch("scheduler.enviar_wapi") as mock_send:
             mock_send.return_value = (True, {"status": "success"})
             
             # Executar a lógica do agendador

@@ -91,16 +91,30 @@ function App() {
 
   // Confirmation Handler
   const openConfirm = (arg1, arg2, arg3, arg4) => {
-    // Suporte para novo formato: openConfirm({ title, message, type, onConfirm, confirmText })
+    // Suporte para novo formato: openConfirm({ title, message, type, onConfirm, confirmText, checkboxLabel, checkboxDescription, defaultCheckboxChecked, confirmTextChecked })
     if (typeof arg1 === 'object' && arg1 !== null) {
-      const { title, message, type = 'info', onConfirm = null, confirmText = null } = arg1;
+      const { 
+        title, 
+        message, 
+        type = 'info', 
+        onConfirm = null, 
+        confirmText = null,
+        confirmTextChecked = null,
+        checkboxLabel = null,
+        checkboxDescription = null,
+        defaultCheckboxChecked = false
+      } = arg1;
       setConfirmDialog({ 
         show: true, 
         title, 
         message, 
-        onConfirm: onConfirm ? () => { onConfirm(); closeConfirm(); } : closeConfirm, 
+        onConfirm: onConfirm ? (extraVal) => { onConfirm(extraVal); closeConfirm(); } : closeConfirm, 
         type,
         confirmText,
+        confirmTextChecked,
+        checkboxLabel,
+        checkboxDescription,
+        defaultCheckboxChecked,
         hideCancel: !onConfirm // Se não tem callback de confirmação, é só um alerta
       });
     } else {
@@ -112,13 +126,29 @@ function App() {
         onConfirm: arg3 ? () => { arg3(); closeConfirm(); } : closeConfirm, 
         type: arg4 || 'danger',
         confirmText: null,
+        confirmTextChecked: null,
+        checkboxLabel: null,
+        checkboxDescription: null,
+        defaultCheckboxChecked: false,
         hideCancel: false
       });
     }
   };
 
   const closeConfirm = () => {
-    setConfirmDialog({ show: false, title: '', message: '', onConfirm: null, type: 'danger', confirmText: null, hideCancel: false });
+    setConfirmDialog({ 
+      show: false, 
+      title: '', 
+      message: '', 
+      onConfirm: null, 
+      type: 'danger', 
+      confirmText: null, 
+      confirmTextChecked: null,
+      checkboxLabel: null, 
+      checkboxDescription: null, 
+      defaultCheckboxChecked: false, 
+      hideCancel: false 
+    });
   };
 
 
@@ -126,18 +156,63 @@ function App() {
   const path = window.location.pathname;
   if (path.startsWith('/registrar/')) {
     const token = path.split('/')[2];
-    return <Register token={token} />;
+    return (
+      <>
+        <Register token={token} />
+        <Toaster 
+          position="top-right" 
+          containerStyle={{ zIndex: 99999 }}
+          toastOptions={{
+            style: {
+              background: '#1e1e2d',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }
+          }} 
+        />
+      </>
+    );
   }
   if (path.startsWith('/setup/')) {
     const token = path.split('/')[2];
-    return <SetupProfile token={token} />;
+    return (
+      <>
+        <SetupProfile token={token} />
+        <Toaster 
+          position="top-right" 
+          containerStyle={{ zIndex: 99999 }}
+          toastOptions={{
+            style: {
+              background: '#1e1e2d',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }
+          }} 
+        />
+      </>
+    );
   }
   if (path === '/esgotado') {
     return <FullSet />;
   }
 
   if (!isLoggedIn) {
-    return <Login />;
+    return (
+      <>
+        <Login />
+        <Toaster 
+          position="top-right" 
+          containerStyle={{ zIndex: 99999 }}
+          toastOptions={{
+            style: {
+              background: '#1e1e2d',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }
+          }} 
+        />
+      </>
+    );
   }
 
   const renderContent = () => {

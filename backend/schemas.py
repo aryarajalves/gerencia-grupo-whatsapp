@@ -1,7 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import uuid
-from datetime import date, time, datetime
+import re
+from datetime import time, datetime
 from typing import Optional, List
+
+def validate_strong_password(v: str) -> str:
+    if not v or len(v) < 12:
+        raise ValueError("A senha deve ter no mínimo 12 caracteres.")
+    if not re.search(r'[a-zA-Z]', v):
+        raise ValueError("A senha deve conter pelo menos 1 letra.")
+    if not re.search(r'\d', v):
+        raise ValueError("A senha deve conter pelo menos 1 número.")
+    if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?/~`]', v):
+        raise ValueError("A senha deve conter pelo menos 1 caractere especial (!@#$%^&* etc).")
+    return v
 
 class ClienteBase(BaseModel):
     nome: str
@@ -46,12 +58,22 @@ class GrupoWhatsAppBase(BaseModel):
     remover_impostor_msg: bool = True  # Se deve remover do grupo quem enviar msg não autorizada
     msg_remocao_impostor: Optional[str] = None  # Template da mensagem de alerta (Ex: "🚫 [ALERTA] O participante @{numero}...")
     numero_fantasma_ativo: bool = False  # Toggle de ativação do Número Fantasma neste grupo
+    webhook_enquete_ativo: bool = False  # Toggle de ativação do Webhook de Enquete neste grupo
+    webhook_enquete_url: Optional[str] = None  # URL externa para envio dos votos/respostas de enquetes
+    webhook_enquete_delay_segundos: int = 0  # Tempo de espera/debounce em segundos antes do envio (0=imediato)
+    webhook_enquete_modo: str = "todas"  # "todas" = Todas as enquetes | "selecionadas" = Apenas enquetes programadas marcadas
+    webhook_enquete_ids: Optional[str] = None  # JSON string com lista de IDs das enquetes selecionadas
 
 class GrupoWhatsAppCreate(GrupoWhatsAppBase):
     pass
 
 class GrupoBulkDelete(BaseModel):
     grupo_ids: List[uuid.UUID]
+
+class TestPollWebhookRequest(BaseModel):
+    webhook_url: str
+    grupo_nome: Optional[str] = "Grupo de Teste"
+    grupo_jid: Optional[str] = "120363405673797894@g.us"
 
 class GrupoWhatsApp(GrupoWhatsAppBase):
     id: uuid.UUID
@@ -71,6 +93,7 @@ class MensagemDisparadaBase(BaseModel):
     link_midia: Optional[str] = None
     opcoes_enquete: Optional[str] = None
     enquete_multipla: Optional[bool] = False
+    webhook_enquete_ativo: Optional[bool] = True  # Se respostas desta enquete agendada devem ser disparadas
     admin_only_settings: Optional[bool] = None
     etiqueta: Optional[str] = None
     status: str = "pendente"
@@ -149,11 +172,29 @@ class Usuario(UsuarioBase):
     class Config:
         from_attributes = True
 
+class UsuarioUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[str] = None
+    cargo: Optional[str] = None # SUPER_ADMIN, ADMIN
+    ativo: Optional[bool] = None
+    password: Optional[str] = None
+
+    @field_validator('password')
+    def validate_pw(cls, v):
+        if v and len(v.strip()) > 0:
+            return validate_strong_password(v)
+        return v
+
 class ProximoDisparo(BaseModel):
     horario: str
     grupo: str
     mensagem: str
     tipo: str = "texto"
+    etiqueta: Optional[str] = None
+    link_convite: Optional[str] = None
+    grupo_id: Optional[str] = None
+    mensagem_id: Optional[str] = None
+    mensagem_completa: Optional[str] = None
 
 class GrupoNoDia(BaseModel):
     dia: int
@@ -202,6 +243,9 @@ class GrupoFiltro(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ExtrairContatosManualRequest(BaseModel):
+    forcar_reenvio_webhook: bool = False
 
 
 class GrupoConjuntoAssociacaoBase(BaseModel):
@@ -288,7 +332,36 @@ class UserRegister(BaseModel):
     password: str
     confirm_password: str
 
+    @field_validator('password')
+    def validate_pw(cls, v):
+        return validate_strong_password(v)
+
+class UserRegisterRequestCode(BaseModel):
+    token: str
+    nome: str
+    email: str
+    password: str
+    confirm_password: str
+
+    @field_validator('password')
+    def validate_pw(cls, v):
+        return validate_strong_password(v)
+
+class UserRegisterConfirmCode(BaseModel):
+    token: str
+    email: str
+    codigo: str
+
+class UserRegisterResponse(BaseModel):
+    message: str
+    email_masked: Optional[str] = None
+
 class PasswordReset(BaseModel):
     token: str
     password: str
     confirm_password: str
+
+    @field_validator('password')
+    def validate_pw(cls, v):
+        return validate_strong_password(v)
+

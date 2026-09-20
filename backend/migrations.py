@@ -3,7 +3,7 @@ import time
 import psycopg2
 from sqlalchemy import inspect, text
 from database import engine, Base
-import models
+import models  # noqa: F401 - Registra os modelos no Base.metadata
 from core.logger import logger
 
 
@@ -210,6 +210,38 @@ def sync_database():
             logger.info("[BANCO DE DADOS] Adicionando coluna 'numero_fantasma_ativo' em 'grupos_whatsapp'...")
             conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN numero_fantasma_ativo BOOLEAN DEFAULT FALSE;"))
             conn.commit()
+
+        if 'webhook_enquete_ativo' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'webhook_enquete_ativo' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN webhook_enquete_ativo BOOLEAN DEFAULT FALSE;"))
+            conn.commit()
+
+        if 'webhook_enquete_url' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'webhook_enquete_url' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN webhook_enquete_url TEXT;"))
+            conn.commit()
+
+        if 'webhook_enquete_delay_segundos' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'webhook_enquete_delay_segundos' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN webhook_enquete_delay_segundos INTEGER DEFAULT 0;"))
+            conn.commit()
+
+        if 'webhook_enquete_modo' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'webhook_enquete_modo' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN webhook_enquete_modo VARCHAR(50) DEFAULT 'todas';"))
+            conn.commit()
+
+        if 'webhook_enquete_ids' not in columns_grupos:
+            logger.info("[BANCO DE DADOS] Adicionando coluna 'webhook_enquete_ids' em 'grupos_whatsapp'...")
+            conn.execute(text("ALTER TABLE grupos_whatsapp ADD COLUMN webhook_enquete_ids TEXT;"))
+            conn.commit()
+
+        if inspector.has_table('mensagens_disparadas'):
+            columns_msgs = [c['name'] for c in inspector.get_columns('mensagens_disparadas')]
+            if 'webhook_enquete_ativo' not in columns_msgs:
+                logger.info("[BANCO DE DADOS] Adicionando coluna 'webhook_enquete_ativo' em 'mensagens_disparadas'...")
+                conn.execute(text("ALTER TABLE mensagens_disparadas ADD COLUMN webhook_enquete_ativo BOOLEAN DEFAULT TRUE;"))
+                conn.commit()
 
         if inspector.has_table('usuarios'):
             columns_users = [c['name'] for c in inspector.get_columns('usuarios')]

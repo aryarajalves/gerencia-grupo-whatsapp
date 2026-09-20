@@ -1,6 +1,16 @@
-import { Users, Key, PauseCircle, PlayCircle, Trash2 } from 'lucide-react';
+import { Users, Key, PauseCircle, PlayCircle, Trash2, Pencil } from 'lucide-react';
 
-const UserTable = ({ filteredUsers, startEditUser, toggleStatus, handleDeleteUser, currentPage = 1, setCurrentPage, itemsPerPage = 10, setItemsPerPage }) => {
+const UserTable = ({ 
+    filteredUsers, 
+    startEditUser, 
+    startResetPassword, 
+    toggleStatus, 
+    handleDeleteUser, 
+    currentPage = 1, 
+    setCurrentPage, 
+    itemsPerPage = 10, 
+    setItemsPerPage 
+}) => {
     const totalItems = filteredUsers.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
     const safePage = Math.min(currentPage, totalPages);
@@ -16,7 +26,7 @@ const UserTable = ({ filteredUsers, startEditUser, toggleStatus, handleDeleteUse
             boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
         }}>
             <div style={{ 
-                display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr', 
+                display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', 
                 padding: '1.5rem 2rem', background: 'rgba(255,255,255,0.02)',
                 fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-dim)',
                 textTransform: 'uppercase', letterSpacing: '0.1em',
@@ -37,7 +47,7 @@ const UserTable = ({ filteredUsers, startEditUser, toggleStatus, handleDeleteUse
                 ) : (
                     paginatedUsers.map((user) => (
                         <div key={user.id} className="user-row-premium" style={{ 
-                            display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr', 
+                            display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', 
                             padding: '1.25rem 2rem', alignItems: 'center',
                             transition: 'all 0.2s', borderBottom: '1px solid rgba(255,255,255,0.02)'
                         }}>
@@ -89,16 +99,24 @@ const UserTable = ({ filteredUsers, startEditUser, toggleStatus, handleDeleteUse
                                     {user.ativo ? 'Ativo' : 'Inativo'}
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
                                 {!user.isFixed ? (
                                     <>
                                         <button 
                                             className="btn-action-premium" 
-                                            title="Gerar link de senha"
+                                            title="Editar Usuário"
                                             onClick={() => startEditUser(user)}
+                                            style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.08)', padding: '8px', borderRadius: '10px' }}
+                                        >
+                                            <Pencil size={17} />
+                                        </button>
+                                        <button 
+                                            className="btn-action-premium" 
+                                            title="Gerar link de senha"
+                                            onClick={() => startResetPassword(user)}
                                             style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)', padding: '8px', borderRadius: '10px' }}
                                         >
-                                            <Key size={18} />
+                                            <Key size={17} />
                                         </button>
                                         <button 
                                             className="btn-action-premium" 
@@ -106,7 +124,7 @@ const UserTable = ({ filteredUsers, startEditUser, toggleStatus, handleDeleteUse
                                             onClick={() => toggleStatus(user.id)}
                                             style={{ color: user.ativo ? '#fbbf24' : '#10b981', background: user.ativo ? 'rgba(245, 158, 11, 0.05)' : 'rgba(16, 185, 129, 0.05)', padding: '8px', borderRadius: '10px' }}
                                         >
-                                            {user.ativo ? <PauseCircle size={18} /> : <PlayCircle size={18} />}
+                                            {user.ativo ? <PauseCircle size={17} /> : <PlayCircle size={17} />}
                                         </button>
                                         <button 
                                             className="btn-action-premium" 
@@ -114,7 +132,7 @@ const UserTable = ({ filteredUsers, startEditUser, toggleStatus, handleDeleteUse
                                             onClick={() => handleDeleteUser(user.id)}
                                             style={{ color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', padding: '8px', borderRadius: '10px' }}
                                         >
-                                            <Trash2 size={18} />
+                                            <Trash2 size={17} />
                                         </button>
                                     </>
                                 ) : (

@@ -2,13 +2,12 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
-from sqlalchemy import func, Time
-
 import httpx
 import models, database, scheduler
 from database import get_db
 from s3_helper import upload_file_to_s3
 from services.security_service import processar_mensagem_seguranca_grupo
+from services.poll_webhook_service import processar_evento_enquete_grupo
 
 router = APIRouter(tags=["Webhooks"])
 
@@ -132,7 +131,10 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
 
         print(f"WEBHOOK: Recebido evento do tipo '{event_type}' (Instance: {instance_id}, Cliente: {cid})")
 
-        WAPI_EVENTS = ["message", "message.create", "message.upsert", "MESSAGES_UPSERT", "messages.upsert", "webhookReceived"]
+        WAPI_EVENTS = [
+            "message", "message.create", "message.upsert", "MESSAGES_UPSERT", "messages.upsert", 
+            "webhookReceived", "poll.update", "poll_vote", "poll.response", "messages.update"
+        ]
         
         if event_type in WAPI_EVENTS:
             import json
@@ -207,14 +209,36 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
                     media_type = "audio"
                     media_payload = message_dict.get("audioMessage") or msg.get("audioMessage") or (msg.get("audio") if isinstance(msg.get("audio"), dict) else None) or message_dict or msg
                     msg_body = ""
-                elif "pollCreationMessage" in message_dict or "pollCreationMessage" in msg or msg_type in ["poll", "enquete", "pollcreation"]:
+                elif any(k.startswith("pollCreationMessage") for k in message_dict) or "pollCreationMessage" in msg or msg_type in ["poll", "enquete", "pollcreation"]:
                     media_type = "enquete"
-                    poll_payload = message_dict.get("pollCreationMessage") or msg.get("pollCreationMessage") or {}
+                    poll_create_key = next((k for k in message_dict if k.startswith("pollCreationMessage")), "pollCreationMessage")
+                    poll_payload = message_dict.get(poll_create_key) or msg.get("pollCreationMessage") or {}
                     msg_body = poll_payload.get("name") or poll_payload.get("title") or msg.get("text") or msg.get("body") or "Enquete"
                     opts = poll_payload.get("options") or poll_payload.get("pollOptions") or []
+                    opt_names = []
                     if isinstance(opts, list) and opts:
                         opt_names = [o.get("optionName") or o.get("name") or str(o) for o in opts if isinstance(o, (dict, str))]
-                        media_url = "|".join([n for n in opt_names if n])
+                    
+                    # Extrai messageSecret e dados do criador
+                    msg_ctx = message_dict.get("messageContextInfo") or msg.get("msgContent", {}).get("messageContextInfo") or {}
+                    msg_secret = msg_ctx.get("messageSecret")
+                    creator_lid = msg.get("sender", {}).get("senderLid") or msg.get("connectedLid") or ""
+                    creator_id = msg.get("sender", {}).get("id") or ""
+                    
+                    media_url = json.dumps({
+                        "options": opt_names,
+                        "secret": msg_secret,
+                        "creator_lid": creator_lid,
+                        "creator_id": creator_id
+                    })
+                elif any(k.startswith("pollUpdateMessage") for k in message_dict) or "pollUpdateMessage" in msg or msg_type in ["poll_vote", "pollupdate", "pollupdatemessage"]:
+                    media_type = "enquete_voto"
+                    poll_up_key = next((k for k in message_dict if k.startswith("pollUpdateMessage")), "pollUpdateMessage")
+                    poll_up_payload = message_dict.get(poll_up_key) or msg.get("pollUpdateMessage") or {}
+                    votes = poll_up_payload.get("pollVotes") or poll_up_payload.get("selectedOptions") or []
+                    vote_names = [v.get("optionName") if isinstance(v, dict) else str(v) for v in votes]
+                    vote_str = ", ".join(vote_names) if vote_names else "Voto registrado"
+                    msg_body = f"📊 Voto na enquete: {vote_str}"
                 elif "conversation" in message_dict:
                     msg_body = message_dict["conversation"]
                 elif "extendedTextMessage" in message_dict:
@@ -222,8 +246,8 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
                 elif msg.get("text") or msg.get("body") or msg.get("caption"):
                     msg_body = msg.get("text") or msg.get("body") or msg.get("caption") or ""
                 
-                # Tenta persistir mídia se identificada
-                if media_type or media_payload:
+                # Tenta persistir mídia se identificada (exceto enquetes)
+                if (media_type and media_type not in ["enquete", "enquete_voto"]) or media_payload:
                     media_url = await persist_whatsapp_media(db, media_payload or {}, msg, media_type or "imagem")
 
                 if not msg_body and not media_url:
@@ -255,6 +279,17 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
                             )
                         except Exception as e_sec:
                             print(f"ERRO AO PROCESSAR SEGURANÇA NO WEBHOOK: {e_sec}")
+
+                        # 📊 Disparo de Webhook de Votos/Respostas de Enquetes
+                        try:
+                            await processar_evento_enquete_grupo(
+                                db=db,
+                                group_jid=remote_jid,
+                                msg_raw=msg,
+                                cid=cid
+                            )
+                        except Exception as e_poll:
+                            print(f"ERRO AO PROCESSAR WEBHOOK DE ENQUETE: {e_poll}")
                     else:
                         # 👻 Validação de Número Fantasma (Mensagem privada de participante de grupo monitorado)
                         try:

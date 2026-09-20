@@ -146,9 +146,25 @@ def obter_configuracoes_atuais_grupo(grupo_jid: str, instance_id: str, headers: 
     # Padrão de segurança: Apenas administradores editam as configurações do grupo (True)
     return True
 
-def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number="Sistema"):
+def enviar_wapi(grupo, msg, db, sender_name="Disparo Automático", sender_number="Sistema", forcar_envio: bool = False):
     """Envia a mensagem diretamente para o grupo via W-API."""
     cid = getattr(grupo, 'cliente_id', None) or getattr(msg, 'cliente_id', None)
+    
+    # Trava de segurança: Se o grupo estiver pausado e não for envio manual/forçado, cancela o disparo
+    if not forcar_envio and not getattr(grupo, 'ativo', True):
+        detalhes = f"Disparo cancelado: o grupo '{getattr(grupo, 'nome', 'Desconhecido')}' está pausado."
+        logger.warning(f"[W-API DISPARO] {detalhes}")
+        registrar_log(
+            db, 
+            getattr(grupo, 'nome', 'Desconhecido'), 
+            getattr(msg, 'mensagem', '') or f"[{getattr(msg, 'tipo_de_mensagem', 'texto').upper()}]", 
+            "Ignorado", 
+            detalhes, 
+            msg_id=getattr(msg, 'id', None), 
+            tipo=getattr(msg, 'tipo_de_mensagem', 'texto'), 
+            cliente_id=cid
+        )
+        return False, detalhes
     
     # Se o grupo tiver cliente_id, podemos buscar as credenciais daquele cliente
     instance_id = None

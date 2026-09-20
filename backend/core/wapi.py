@@ -1,5 +1,4 @@
 import os
-import httpx
 import models
 
 WAPI_BASE = "https://api.w-api.app/v1"

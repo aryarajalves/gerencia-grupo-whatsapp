@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, Response, Query
-from datetime import datetime
+from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 import uuid
@@ -7,7 +7,7 @@ import os
 import httpx
 from typing import Optional
 
-import models, schemas, security, database, scheduler
+import models, schemas, security, scheduler
 from database import get_db
 from client_context import get_active_client_id
 from s3_helper import upload_file_to_s3
@@ -30,10 +30,7 @@ def get_webhook_url(request: Request):
     return {
         "url": f"{base_url}/webhook/whatsapp",
         "url_principal": f"{base_url}/webhook/whatsapp",
-        "url_fantasma": f"{base_url}/webhook/fantasma"
     }
-
-from datetime import datetime, date
 
 @router.get("/mensagens/", response_model=schemas.PaginatedCapturas, dependencies=[Depends(security.get_api_key)])
 def listar_mensagens_capturadas(
@@ -237,7 +234,7 @@ async def enviar_mensagem_chat(req: schemas.ChatSendMessage, db: Session = Depen
         cliente_id=cid
     )
 
-    success, result = scheduler.enviar_wapi(grupo, fake_msg, db, sender_name="Você", sender_number="Bot")
+    success, result = scheduler.enviar_wapi(grupo, fake_msg, db, sender_name="Você", sender_number="Bot", forcar_envio=True)
     if not success:
         raise HTTPException(status_code=502, detail=f"Erro na W-API: {result}")
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import uuid
 import os
 import httpx
@@ -231,10 +231,22 @@ def sincronizar_dados_grupos(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro na sincronização: {str(e)}")
 
 @router.post("/grupos/{grupo_id}/extrair-contatos", dependencies=[Depends(security.get_api_key)])
-def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depends(get_db)):
+def extrair_contatos_grupo_manualmente(
+    grupo_id: uuid.UUID,
+    payload: Optional[schemas.ExtrairContatosManualRequest] = None,
+    forcar_reenvio: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
     """
     Força a extração imediata dos contatos de um grupo específico via W-API.
+    Se forcar_reenvio_webhook=True, reenvia para todos os contatos do grupo (exceto admins).
     """
+    forcar = False
+    if payload and payload.forcar_reenvio_webhook:
+        forcar = True
+    elif forcar_reenvio is True:
+        forcar = True
+
     cid = get_active_client_id(db)
     grupo = db.query(models.GrupoWhatsApp).filter(
         models.GrupoWhatsApp.id == grupo_id, 
@@ -262,16 +274,26 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
         db.query(models.ContatoGrupo).filter_by(jid_grupo=grupo.id_do_grupo).update({"no_grupo": False})
         db.commit()
 
-        novos_contatos_count = sync_service.processar_participantes_grupo(
-            db, client, instance_id, headers, grupo, participants, agora, group_is_closed=is_closed
+        detalhes = sync_service.processar_participantes_grupo(
+            db, client, instance_id, headers, grupo, participants, agora,
+            group_is_closed=is_closed,
+            forcar_reenvio_webhook=forcar,
+            retornar_detalhes=True
         )
+        novos_contatos_count = detalhes["novos"]
+        webhooks_disparados = detalhes["webhooks"]
         db.commit()
 
         # Registra log no Histórico
+        msg_log = f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {novos_contatos_count} novos"
+        if webhooks_disparados > 0:
+            msg_log += f", {webhooks_disparados} webhooks disparados"
+        msg_log += ")"
+
         log = models.LogDisparo(
             cliente_id=cid,
             grupo_nome=grupo.nome,
-            mensagem_corpo=f"Extração manual de contatos realizada ({len(participants)} contatos encontrados, {novos_contatos_count} novos)",
+            mensagem_corpo=msg_log,
             status="SUCESSO",
             tipo="extracao_contatos",
             criado_em=agora
@@ -279,8 +301,78 @@ def extrair_contatos_grupo_manualmente(grupo_id: uuid.UUID, db: Session = Depend
         db.add(log)
         db.commit()
 
+        msg_retorno = f"Extração de contatos concluída para '{grupo.nome}' ({len(participants)} contatos encontrados"
+        if webhooks_disparados > 0:
+            msg_retorno += f", {webhooks_disparados} webhooks disparados"
+        msg_retorno += ")"
+
         return {
             "status": "success",
-            "message": f"Extração de contatos concluída para '{grupo.nome}' ({len(participants)} contatos encontrados)",
-            "quantidade_contatos": len(participants)
+            "message": msg_retorno,
+            "quantidade_contatos": len(participants),
+            "webhooks_disparados": webhooks_disparados
         }
+
+
+@router.post("/grupos/test-poll-webhook", dependencies=[Depends(security.get_api_key)])
+async def testar_webhook_enquete(payload: schemas.TestPollWebhookRequest, db: Session = Depends(get_db)):
+    url = (payload.webhook_url or "").strip()
+    if not url or not url.startswith("http"):
+        raise HTTPException(status_code=400, detail="Por favor, forneça uma URL de Webhook válida iniciando com http:// ou https://")
+
+    agora_bsb = datetime.now(scheduler.BR_TZ).strftime("%Y-%m-%d %H:%M:%S")
+
+    dados_teste = {
+      "evento": "voto_enquete_teste",
+      "grupo": {
+        "id": "teste-preview-id",
+        "nome": payload.grupo_nome or "WhatsApp - Teste - Astrologia",
+        "jid": payload.grupo_jid or "120363405673797894@g.us"
+      },
+      "usuario": {
+        "nome": "Lead de Demonstração (Teste)",
+        "numero": "5511999998888",
+        "jid": "5511999998888@s.whatsapp.net"
+      },
+      "enquete": {
+        "id_mensagem_enquete": "POLL_TEST_ID_12345",
+        "titulo": "Qual seu principal interesse no lançamento?",
+        "opcao_marcada": "Garantir minha vaga no 1º lote com desconto",
+        "opcoes_marcadas": ["Garantir minha vaga no 1º lote com desconto"],
+        "todas_opcoes": [
+          "Garantir minha vaga no 1º lote com desconto",
+          "Conhecer mais sobre o cronograma",
+          "Tirar dúvidas com o suporte"
+        ]
+      },
+      "data_hora": agora_bsb,
+      "is_teste": True,
+      "raw_data": {
+        "tipo": "disparo_manual_de_teste",
+        "origem": "painel_gerenciador_grupos"
+      }
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                url,
+                json=dados_teste,
+                headers={"Content-Type": "application/json"}
+            )
+            if 200 <= resp.status_code < 300:
+                return {
+                    "success": True,
+                    "status_code": resp.status_code,
+                    "message": f"Webhook testado com sucesso! O endpoint respondeu com status {resp.status_code}."
+                }
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"O webhook foi contactado, mas retornou status de erro {resp.status_code}: {resp.text[:200]}"
+                )
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Falha de conexão com a URL informada: {str(e)}"
+        )

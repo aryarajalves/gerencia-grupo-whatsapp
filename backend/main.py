@@ -1,11 +1,12 @@
 import os
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 # Core imports
-import models, database, scheduler, migrations, security
+import models, scheduler, migrations, security
 from core.logger import logger, setup_uvicorn_logging
 from core.limiter import rate_limit_middleware
 from database import SessionLocal
@@ -15,6 +16,19 @@ from routers import users, groups, messages, logs, webhooks, dashboard, media, c
 
 app = FastAPI(title="Gerenciador de Grupos WhatsApp", version="1.5.0")
 app.middleware("http")(rate_limit_middleware)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    first_msg = errors[0].get("msg", "Erro de validação") if errors else "Erro de validação nos dados enviados"
+    loc = errors[0].get("loc", []) if errors else []
+    field_name = str(loc[-1]) if loc else ""
+    detail = f"Erro de validação no campo '{field_name}': {first_msg}" if field_name else first_msg
+    logger.warning(f"Erro de validação em {request.method} {request.url.path}: {errors}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": detail}
+    )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
